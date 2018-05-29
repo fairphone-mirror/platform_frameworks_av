@@ -105,6 +105,9 @@
 #include "DolbyMediaPlayerServiceExtImpl.h"
 #endif // DOLBY_END
 
+static const int kDumpLockRetries = 50;
+static const int kDumpLockSleepUs = 20000;
+
 namespace {
 using android::media::Metadata;
 using android::status_t;
@@ -428,12 +431,32 @@ status_t MediaPlayerService::Client::dump(int fd, const Vector<String16>& args)
     snprintf(buffer, 255, "  pid(%d), connId(%d), status(%d), looping(%s)\n",
             mPid, mConnId, mStatus, mLoop?"true": "false");
     result.append(buffer);
-    write(fd, result.string(), result.size());
-    if (mPlayer != NULL) {
-        mPlayer->dump(fd, args);
+
+    sp<MediaPlayerBase> p;
+    sp<AudioOutput> audioOutput;
+    bool locked = false;
+    for (int i = 0; i < kDumpLockRetries; ++i) {
+        if (mLock.tryLock() == NO_ERROR) {
+            locked = true;
+            break;
+        }
+        usleep(kDumpLockSleepUs);
     }
-    if (mAudioOutput != 0) {
-        mAudioOutput->dump(fd, args);
+
+    if (locked) {
+        p = mPlayer;
+        audioOutput = mAudioOutput;
+        mLock.unlock();
+    } else {
+        result.append("  lock is taken, no dump from player and audio output\n");
+    }
+    write(fd, result.string(), result.size());
+
+    if (p != NULL) {
+        p->dump(fd, args);
+    }
+    if (audioOutput != 0) {
+        audioOutput->dump(fd, args);
     }
     write(fd, "\n", 1);
     return NO_ERROR;
@@ -603,17 +626,21 @@ MediaPlayerService::Client::Client(
     mUID = uid;
     mRetransmitEndpointValid = false;
     mAudioAttributes = NULL;
+    mListener = new Listener(this);
 
 #if CALLBACK_ANTAGONIZER
     ALOGD("create Antagonizer");
-    mAntagonizer = new Antagonizer(notify, this);
+    mAntagonizer = new Antagonizer(mListener);
 #endif
 }
 
 MediaPlayerService::Client::~Client()
 {
     ALOGV("Client(%d) destructor pid = %d", mConnId, mPid);
-    mAudioOutput.clear();
+    {
+        Mutex::Autolock l(mLock);
+        mAudioOutput.clear();
+    }
     wp<Client> client(this);
     disconnect();
     mService->removeClient(client);
@@ -632,15 +659,14 @@ void MediaPlayerService::Client::disconnect()
         Mutex::Autolock l(mLock);
         p = mPlayer;
         mClient.clear();
+        mPlayer.clear();
     }
-
-    mPlayer.clear();
 
     // clear the notification to prevent callbacks to dead client
     // and reset the player. We assume the player will serialize
     // access to itself if necessary.
     if (p != 0) {
-        p->setNotifyCallback(0, 0);
+        p->setNotifyCallback(0);
 #if CALLBACK_ANTAGONIZER
         ALOGD("kill Antagonizer");
         mAntagonizer->kill();
@@ -648,7 +674,10 @@ void MediaPlayerService::Client::disconnect()
         p->reset();
     }
 
-    disconnectNativeWindow();
+    {
+        Mutex::Autolock l(mLock);
+        disconnectNativeWindow_l();
+    }
 
     IPCThreadState::self()->flushCommands();
 }
@@ -656,13 +685,13 @@ void MediaPlayerService::Client::disconnect()
 sp<MediaPlayerBase> MediaPlayerService::Client::createPlayer(player_type playerType)
 {
     // determine if we have the right player type
-    sp<MediaPlayerBase> p = mPlayer;
+    sp<MediaPlayerBase> p = getPlayer();
     if ((p != NULL) && (p->playerType() != playerType)) {
         ALOGV("delete player");
         p.clear();
     }
     if (p == NULL) {
-        p = MediaPlayerFactory::createPlayer(playerType, this, notify, mPid);
+        p = MediaPlayerFactory::createPlayer(playerType, mListener, mPid);
     }
 
     if (p != NULL) {
@@ -712,8 +741,9 @@ sp<MediaPlayerBase> MediaPlayerService::Client::setDataSource_pre(
         return NULL;
     }
 
-    mExtractorDeathListener = new ServiceDeathNotifier(binder, p, MEDIAEXTRACTOR_PROCESS_DEATH);
-    binder->linkToDeath(mExtractorDeathListener);
+    sp<ServiceDeathNotifier> extractorDeathListener =
+            new ServiceDeathNotifier(binder, p, MEDIAEXTRACTOR_PROCESS_DEATH);
+    binder->linkToDeath(extractorDeathListener);
 
     binder = sm->getService(String16("media.codec"));
     if (binder == NULL) {
@@ -721,11 +751,16 @@ sp<MediaPlayerBase> MediaPlayerService::Client::setDataSource_pre(
         return NULL;
     }
 
-    mCodecDeathListener = new ServiceDeathNotifier(binder, p, MEDIACODEC_PROCESS_DEATH);
-    binder->linkToDeath(mCodecDeathListener);
+    sp<ServiceDeathNotifier> codecDeathListener =
+            new ServiceDeathNotifier(binder, p, MEDIACODEC_PROCESS_DEATH);
+    binder->linkToDeath(codecDeathListener);
+
+    Mutex::Autolock lock(mLock);
+
+    mExtractorDeathListener = extractorDeathListener;
+    mCodecDeathListener = codecDeathListener;
 
     if (!p->hardwareOutput()) {
-        Mutex::Autolock l(mLock);
         mAudioOutput = new AudioOutput(mAudioSessionId, IPCThreadState::self()->getCallingUid(),
                 mPid, mAudioAttributes);
         static_cast<MediaPlayerInterface*>(p.get())->setAudioSink(mAudioOutput);
@@ -734,28 +769,29 @@ sp<MediaPlayerBase> MediaPlayerService::Client::setDataSource_pre(
     return p;
 }
 
-void MediaPlayerService::Client::setDataSource_post(
+status_t MediaPlayerService::Client::setDataSource_post(
         const sp<MediaPlayerBase>& p,
         status_t status)
 {
     ALOGV(" setDataSource");
-    mStatus = status;
-    if (mStatus != OK) {
-        ALOGE("  error: %d", mStatus);
-        return;
+    if (status != OK) {
+        ALOGE("  error: %d", status);
+        return status;
     }
 
     // Set the re-transmission endpoint if one was chosen.
     if (mRetransmitEndpointValid) {
-        mStatus = p->setRetransmitEndpoint(&mRetransmitEndpoint);
-        if (mStatus != NO_ERROR) {
-            ALOGE("setRetransmitEndpoint error: %d", mStatus);
+        status = p->setRetransmitEndpoint(&mRetransmitEndpoint);
+        if (status != NO_ERROR) {
+            ALOGE("setRetransmitEndpoint error: %d", status);
         }
     }
 
-    if (mStatus == OK) {
+    if (status == OK) {
+        Mutex::Autolock lock(mLock);
         mPlayer = p;
     }
+    return status;
 }
 
 status_t MediaPlayerService::Client::setDataSource(
@@ -786,9 +822,9 @@ status_t MediaPlayerService::Client::setDataSource(
             ALOGE("Couldn't open fd for %s", url);
             return UNKNOWN_ERROR;
         }
-        setDataSource(fd, 0, 0x7fffffffffLL); // this sets mStatus
+        status_t status = setDataSource(fd, 0, 0x7fffffffffLL); // this sets mStatus
         close(fd);
-        return mStatus;
+        return mStatus = status;
     } else {
         player_type playerType = MediaPlayerFactory::getPlayerType(this, url);
         sp<MediaPlayerBase> p = setDataSource_pre(playerType);
@@ -796,8 +832,9 @@ status_t MediaPlayerService::Client::setDataSource(
             return NO_INIT;
         }
 
-        setDataSource_post(p, p->setDataSource(httpService, url, headers));
-        return mStatus;
+        return mStatus =
+                setDataSource_post(
+                p, p->setDataSource(httpService, url, headers));
     }
 }
 
@@ -836,8 +873,7 @@ status_t MediaPlayerService::Client::setDataSource(int fd, int64_t offset, int64
     }
 
     // now set data source
-    setDataSource_post(p, p->setDataSource(fd, offset, length));
-    return mStatus;
+    return mStatus = setDataSource_post(p, p->setDataSource(fd, offset, length));
 }
 
 status_t MediaPlayerService::Client::setDataSource(
@@ -850,8 +886,7 @@ status_t MediaPlayerService::Client::setDataSource(
     }
 
     // now set data source
-    setDataSource_post(p, p->setDataSource(source));
-    return mStatus;
+    return mStatus = setDataSource_post(p, p->setDataSource(source));
 }
 
 status_t MediaPlayerService::Client::setDataSource(
@@ -863,11 +898,10 @@ status_t MediaPlayerService::Client::setDataSource(
         return NO_INIT;
     }
     // now set data source
-    setDataSource_post(p, p->setDataSource(dataSource));
-    return mStatus;
+    return mStatus = setDataSource_post(p, p->setDataSource(dataSource));
 }
 
-void MediaPlayerService::Client::disconnectNativeWindow() {
+void MediaPlayerService::Client::disconnectNativeWindow_l() {
     if (mConnectedWindow != NULL) {
         status_t err = native_window_api_disconnect(mConnectedWindow.get(),
                 NATIVE_WINDOW_API_MEDIA);
@@ -905,7 +939,8 @@ status_t MediaPlayerService::Client::setVideoSurfaceTexture(
             // ANW, which may result in errors.
             reset();
 
-            disconnectNativeWindow();
+            Mutex::Autolock lock(mLock);
+            disconnectNativeWindow_l();
 
             return err;
         }
@@ -916,14 +951,22 @@ status_t MediaPlayerService::Client::setVideoSurfaceTexture(
     // on the disconnected ANW, which may result in errors.
     status_t err = p->setVideoSurfaceTexture(bufferProducer);
 
-    disconnectNativeWindow();
-
-    mConnectedWindow = anw;
+    mLock.lock();
+    disconnectNativeWindow_l();
 
     if (err == OK) {
+        mConnectedWindow = anw;
         mConnectedWindowBinder = binder;
+        mLock.unlock();
     } else {
-        disconnectNativeWindow();
+        mLock.unlock();
+        status_t err = native_window_api_disconnect(
+                anw.get(), NATIVE_WINDOW_API_MEDIA);
+
+        if (err != OK) {
+            ALOGW("native_window_api_disconnect returned an error: %s (%d)",
+                    strerror(-err), err);
+        }
     }
 
     return err;
@@ -1279,9 +1322,11 @@ status_t MediaPlayerService::Client::setRetransmitEndpoint(
     if (p != 0) return INVALID_OPERATION;
 
     if (NULL != endpoint) {
+        Mutex::Autolock lock(mLock);
         mRetransmitEndpoint = *endpoint;
         mRetransmitEndpointValid = true;
     } else {
+        Mutex::Autolock lock(mLock);
         mRetransmitEndpointValid = false;
     }
 
@@ -1299,6 +1344,7 @@ status_t MediaPlayerService::Client::getRetransmitEndpoint(
     if (p != NULL)
         return p->getRetransmitEndpoint(endpoint);
 
+    Mutex::Autolock lock(mLock);
     if (!mRetransmitEndpointValid)
         return NO_INIT;
 
@@ -1308,30 +1354,25 @@ status_t MediaPlayerService::Client::getRetransmitEndpoint(
 }
 
 void MediaPlayerService::Client::notify(
-        void* cookie, int msg, int ext1, int ext2, const Parcel *obj)
+        int msg, int ext1, int ext2, const Parcel *obj)
 {
-    Client* client = static_cast<Client*>(cookie);
-    if (client == NULL) {
-        return;
-    }
-
     sp<IMediaPlayerClient> c;
     {
-        Mutex::Autolock l(client->mLock);
-        c = client->mClient;
-        if (msg == MEDIA_PLAYBACK_COMPLETE && client->mNextClient != NULL) {
-            if (client->mAudioOutput != NULL)
-                client->mAudioOutput->switchToNextOutput();
+        Mutex::Autolock l(mLock);
+        c = mClient;
+        if (msg == MEDIA_PLAYBACK_COMPLETE && mNextClient != NULL) {
+            if (mAudioOutput != NULL)
+                mAudioOutput->switchToNextOutput();
 
             ALOGD("gapless:current track played back");
             ALOGD("gapless:try to do a gapless switch to next track");
 
-            if (client->mNextClient->start() == NO_ERROR &&
-                client->mNextClient->mClient != NULL) {
-                client->mNextClient->mClient->notify(
+            if (mNextClient->start() == NO_ERROR &&
+                mNextClient->mClient != NULL) {
+                mNextClient->mClient->notify(
                         MEDIA_INFO, MEDIA_INFO_STARTED_AS_NEXT, 0, obj);
-            } else if (client->mClient != NULL) {
-                client->mClient->notify(MEDIA_ERROR, MEDIA_ERROR_UNKNOWN , 0, obj);
+            } else if (mClient != NULL) {
+                mClient->notify(MEDIA_ERROR, MEDIA_ERROR_UNKNOWN , 0, obj);
                 ALOGE("gapless:start playback for next track failed");
             }
         }
@@ -1341,17 +1382,17 @@ void MediaPlayerService::Client::notify(
         MEDIA_INFO_METADATA_UPDATE == ext1) {
         const media::Metadata::Type metadata_type = ext2;
 
-        if(client->shouldDropMetadata(metadata_type)) {
+        if(shouldDropMetadata(metadata_type)) {
             return;
         }
 
         // Update the list of metadata that have changed. getMetadata
         // also access mMetadataUpdated and clears it.
-        client->addNewMetadataUpdate(metadata_type);
+        addNewMetadataUpdate(metadata_type);
     }
 
     if (c != NULL) {
-        ALOGV("[%d] notify (%p, %d, %d, %d)", client->mConnId, cookie, msg, ext1, ext2);
+        ALOGV("[%d] notify (%d, %d, %d)", mConnId, msg, ext1, ext2);
         c->notify(msg, ext1, ext2, obj);
     }
 }
@@ -1383,8 +1424,8 @@ void MediaPlayerService::Client::addNewMetadataUpdate(media::Metadata::Type meta
 #if CALLBACK_ANTAGONIZER
 const int Antagonizer::interval = 10000; // 10 msecs
 
-Antagonizer::Antagonizer(notify_callback_f cb, void* client) :
-    mExit(false), mActive(false), mClient(client), mCb(cb)
+Antagonizer::Antagonizer(const sp<MediaPlayerBase::Listener> &listener) :
+    mExit(false), mActive(false), mListener(listener)
 {
     createThread(callbackThread, this);
 }
@@ -1404,7 +1445,7 @@ int Antagonizer::callbackThread(void* user)
     while (!p->mExit) {
         if (p->mActive) {
             ALOGV("send event");
-            p->mCb(p->mClient, 0, 0, 0);
+            p->mListener->notify(0, 0, 0, 0);
         }
         usleep(interval);
     }
