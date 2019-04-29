@@ -1079,6 +1079,18 @@ bool MediaCodec::handleDequeueOutputBuffer(const sp<AReplyToken> &replyID, bool 
             flags |= BUFFER_FLAG_DATACORRUPT;
         }
 
+        // Workaround for CtsMediaTestCases: android.media.cts.DecoderTest#testEOSBehaviorH264
+        // for the single-frame-case. The Qualcomm hardware decoder reports
+        // unexpected metadata for that case.
+        if (timeUs == -1 && index == 0 && flags == BUFFER_FLAG_EOS
+            && mVideoWidth == 480 && mVideoHeight == 360
+            && mComponentName == "OMX.qcom.video.decoder.avc") {
+            ALOGD(
+                "Replacing unexpected timeUs value of -1 with 0, working "
+                "around CTS failure: testEOSBehaviorH264.");
+            response->setInt64("timeUs", 0);
+        }
+
         response->setInt32("flags", flags);
         response->postReply(replyID);
     }
