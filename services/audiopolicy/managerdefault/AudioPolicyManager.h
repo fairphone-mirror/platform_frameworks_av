@@ -606,7 +606,7 @@ protected:
 
         // Surround formats that are enabled.
         std::unordered_set<audio_format_t> mSurroundFormats;
-private:
+protected:
         // Add or remove AC3 DTS encodings based on user preferences.
         void filterSurroundFormats(FormatVector *formatsPtr);
         void filterSurroundChannelMasks(ChannelsVector *channelMasksPtr);
