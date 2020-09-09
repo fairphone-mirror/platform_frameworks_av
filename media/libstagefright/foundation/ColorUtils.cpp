@@ -93,11 +93,18 @@ static bool isDefined(ColorAspects::MatrixCoeffs c) {
     return c <= ColorAspects::MatrixBT2020Constant;
 }
 
+// Allow access to sStandardFallbacks defined further down without changing the
+// code structure compared to AOSP.
+static const ALookup<CU::ColorStandard, std::pair<CA::Primaries, CA::MatrixCoeffs>>&
+getStandardFallbacks();
+
 //static
 int32_t ColorUtils::wrapColorAspectsIntoColorStandard(
         ColorAspects::Primaries primaries, ColorAspects::MatrixCoeffs coeffs) {
     ColorStandard res;
     if (sStandards.map(std::make_pair(primaries, coeffs), &res)) {
+        return res;
+    } else if (getStandardFallbacks().map(std::make_pair(primaries, coeffs), &res)) {
         return res;
     } else if (!isValid(primaries) || !isValid(coeffs)) {
         return kColorStandardUnspecified;
@@ -429,6 +436,10 @@ ALookup<CU::ColorStandard, std::pair<CA::Primaries, CA::MatrixCoeffs>> sStandard
                                        { CA::PrimariesGenericFilm, CA::MatrixBT2020Constant } },
     }
 };
+
+static const ALookup<CU::ColorStandard, std::pair<CA::Primaries, CA::MatrixCoeffs>>& getStandardFallbacks() {
+    return sStandardFallbacks;
+}
 
 const static
 ALookup<CU::ColorStandard, CA::Primaries> sStandardPrimariesFallbacks {
