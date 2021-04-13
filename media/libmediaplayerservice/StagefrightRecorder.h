@@ -14,6 +14,18 @@
  * limitations under the License.
  */
 
+/*
+Copyright (C) 2020 Nokia Corporation.
+This material, including documentation and any related
+computer programs, is protected by copyright controlled by
+Nokia Corporation. All rights are reserved. Copying,
+including reproducing, storing, adapting or translating, any
+or all of this material requires the prior written consent of
+Nokia Corporation. This material also contains confidential
+information which may not be disclosed to others without the
+prior written consent of Nokia Corporation.
+*/
+
 #ifndef STAGEFRIGHT_RECORDER_H_
 
 #define STAGEFRIGHT_RECORDER_H_
@@ -40,6 +52,9 @@ struct AudioSource;
 class MediaProfiles;
 struct ALooper;
 struct AMessage;
+class IMediaSource;
+class IMediaCodecEventListener;
+struct OzoAudioParamsStagefright;
 
 struct StagefrightRecorder : public MediaRecorderBase {
     explicit StagefrightRecorder(const String16 &opPackageName);
@@ -238,6 +253,18 @@ protected:
 
     StagefrightRecorder(const StagefrightRecorder &);
     StagefrightRecorder &operator=(const StagefrightRecorder &);
+public:
+    virtual status_t setOzoRunTimeParameters(const String8 &params);
+    virtual status_t setOzoAudioTuneFile(int fd);
+
+private:
+    struct OzoAudioParamsStagefright *mOzoAudioParams;
+    bool mOzoFileSourceEnable;
+    bool mOzoBrandEnabled;
+    IMediaCodecEventListener *mCodecEventListener;
+    IMediaCodecEventListener *mOzoTuneWriter;
+
+    void closeOzoAudioTuneFile();
 };
 
 }  // namespace android

@@ -15,6 +15,18 @@
  ** limitations under the License.
  */
 
+/*
+Copyright (C) 2020 Nokia Corporation.
+This material, including documentation and any related
+computer programs, is protected by copyright controlled by
+Nokia Corporation. All rights are reserved. Copying,
+including reproducing, storing, adapting or translating, any
+or all of this material requires the prior written consent of
+Nokia Corporation. This material also contains confidential
+information which may not be disclosed to others without the
+prior written consent of Nokia Corporation.
+*/
+
 //#define LOG_NDEBUG 0
 #define LOG_TAG "IMediaRecorder"
 
@@ -69,7 +81,9 @@ enum {
     SET_PREFERRED_MICROPHONE_DIRECTION,
     SET_PREFERRED_MICROPHONE_FIELD_DIMENSION,
     SET_PRIVACY_SENSITIVE,
-    GET_PRIVACY_SENSITIVE
+    GET_PRIVACY_SENSITIVE,
+    SET_OZORUNTIMEPARAMETERS,
+    SET_OZOTUNE_FILE_FD,
 };
 
 class BpMediaRecorder: public BpInterface<IMediaRecorder>
@@ -231,6 +245,15 @@ public:
         return reply.readInt32();
     }
 
+    status_t setOzoAudioTuneFile(int fd) {
+        ALOGV("setOzoAudioTuneFile(%d)", fd);
+        Parcel data, reply;
+        data.writeInterfaceToken(IMediaRecorder::getInterfaceDescriptor());
+        data.writeFileDescriptor(fd);
+        remote()->transact(SET_OZOTUNE_FILE_FD, data, &reply);
+        return reply.readInt32();
+    }
+
     status_t setVideoSize(int width, int height)
     {
         ALOGV("setVideoSize(%dx%d)", width, height);
@@ -259,6 +282,16 @@ public:
         data.writeInterfaceToken(IMediaRecorder::getInterfaceDescriptor());
         data.writeString8(params);
         remote()->transact(SET_PARAMETERS, data, &reply);
+        return reply.readInt32();
+    }
+
+    status_t setOzoRunTimeParameters(const String8& params)
+    {
+        ALOGV("setOzoRunTimeParameters(%s)", params.string());
+        Parcel data, reply;
+        data.writeInterfaceToken(IMediaRecorder::getInterfaceDescriptor());
+        data.writeString8(params);
+        remote()->transact(SET_OZORUNTIMEPARAMETERS, data, &reply);
         return reply.readInt32();
     }
 
@@ -625,6 +658,14 @@ status_t BnMediaRecorder::onTransact(
             ::close(fd);
             return NO_ERROR;
         } break;
+        case SET_OZOTUNE_FILE_FD: {
+            ALOGV("SET_OZOTUNE_FILE_FD");
+            CHECK_INTERFACE(IMediaRecorder, data, reply);
+            int fd = dup(data.readFileDescriptor());
+            reply->writeInt32(setOzoAudioTuneFile(fd));
+            ::close(fd);
+            return NO_ERROR;
+        } break;
         case SET_VIDEO_SIZE: {
             ALOGV("SET_VIDEO_SIZE");
             CHECK_INTERFACE(IMediaRecorder, data, reply);
@@ -644,6 +685,12 @@ status_t BnMediaRecorder::onTransact(
             ALOGV("SET_PARAMETER");
             CHECK_INTERFACE(IMediaRecorder, data, reply);
             reply->writeInt32(setParameters(data.readString8()));
+            return NO_ERROR;
+        } break;
+        case SET_OZORUNTIMEPARAMETERS: {
+            ALOGV("SET_OZORUNTIMEPARAMETERS");
+            CHECK_INTERFACE(IMediaRecorder, data, reply);
+            reply->writeInt32(setOzoRunTimeParameters(data.readString8()));
             return NO_ERROR;
         } break;
         case SET_LISTENER: {

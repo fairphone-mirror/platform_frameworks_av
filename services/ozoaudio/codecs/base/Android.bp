@@ -1,0 +1,33 @@
+cc_library_static {
+    name: "libcodec2_soft_ozocommon",
+    vendor: true,
+
+    srcs: [
+        "SimpleC2Component.cpp",
+        "SimpleC2Interface.cpp",
+    ],
+
+    export_include_dirs: [
+        "include",
+    ],
+
+    include_dirs: [
+        "system/core/base/include",
+        "hardware/libhardware/include",
+        "frameworks/av/media/codec2/vndk/include",
+        "frameworks/av/media/codec2/core/include",
+        "frameworks/av/services/ozoaudio/store",
+    ],
+
+    shared_libs: [
+        "liblog",
+        "libstagefright_foundation",
+    ],
+
+    sanitize: {
+        misc_undefined: [
+            "unsigned-integer-overflow",
+            "signed-integer-overflow",
+        ],
+    },
+}

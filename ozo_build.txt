@@ -1,0 +1,96 @@
+This OZO Audio example integration has been built on top of AOSP tag android-11.0.0_r1 for the "flame" device (Pixel 4).
+
+Build instructions:
+- Check out full AOSP android-11.0.0_r1 code base with repo tool
+- Download and unpack device binaries from https://developers.google.com/android/drivers
+  - For flame device also coral device QC binaries are needed
+- Change to Nokia provided repos (at least frameworks/av, frameworks/base, hardware/qcom/audio, device/google/<Nokia provided repos>)
+- Setup build:
+  - source build/envsetup.sh
+  - lunch aosp_flame-userdebug
+- Build the image
+  - make -j && make vendor_file_contexts
+- Flash image to device
+  - adb reboot bootloader
+  - fastboot flashall -w
+  - adb root
+  - adb disable-verity
+  - adb reboot
+- Build OZO additions
+  - mmm frameworks/av/services/ozoaudio frameworks/av/services/ozoaudio/codecs/ozo frameworks/av/media/libozoaudio/prebuilt
+  - If Ozo effect is to be included, build also
+    - mmm hardware/qcom/audio/hal frameworks/av/media/libeffects/ozo
+    - Extend /vendor/etc/audio_effects.xml with following XML elements:
+
+      <libraries>
+        ...
+        <library name="ozo_processing" path="libozoprocessing.so"/>
+      </libraries>
+
+      <effects>
+        ...
+        <effect name="ozo" library="ozo_processing" uuid="7e384a3b-7850-4a64-a097-884250d8a737"/>
+      </effects>
+
+  - adb root
+  - adb remount
+  - adb sync
+  - Include OZO Audio vendor store to /vendor/etc/vintf/manifest.xml
+    - Extend android.hardware.media.c2 section
+      <hal format="hidl">
+        <name>android.hardware.media.c2</name>
+        <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+          <name>IComponentStore</name>
+          <instance>default</instance>
+          <instance>ozoaudio</instance> <- ADD THIS
+        </interface>
+        <fqname>@1.0::IComponentStore/default</fqname>
+      </hal>
+  - Extend /vendor/etc/media_codecs_c2.xml to include OZO Audio codecs
+    - Under <Decoders> element add:
+        <MediaCodec name="c2.nokia.ozoaudio.decoder" type="audio/ozoaudio">
+            <Limit name="channel-count" max="8" />
+            <Limit name="sample-rate" ranges="48000" />
+            <Limit name="bitrate" range="8000-960000" />
+        </MediaCodec>
+    - Under <Encoders> element add:
+        <MediaCodec name="c2.nokia.ozoaudio.encoder" type="audio/ozoaudio">
+            <Limit name="sample-rate" ranges="48000" />
+            <Limit name="bitrate" range="128000-960000" />
+        </MediaCodec>
+  - Copy the SDK license file to device
+    - adb push <local-license-path> /vendor/etc/ozosdk.license
+- Restore security context of OZO Audio store service binary
+  - adb reboot
+  - adb root
+  - adb remount
+  - adb shell restorecon /vendor/bin/hw/vendor.ozoaudio.media.c2@1.0-service
+  - adb reboot
+- Verify that OZO Audio libraries are on device after reboot
+    - adb root
+    - adb shell find /vendor -name "*ozo*"
+      - /vendor/etc/seccomp_policy/vendor.ozoaudio.media.c2@1.0-default-seccomp_policy
+      - /vendor/etc/init/vendor.ozoaudio.media.c2@1.0-service.rc
+      - /vendor/etc/ozosdk.license
+      - /vendor/lib(64)/libcodec2_soft_ozoenc.so
+      - /vendor/lib(64)/libcodec2_soft_ozodec.so
+      - /vendor/lib(64)/libav_ozodecoder.so
+      - /vendor/lib(64)/libav_ozoencoder.so
+      - /vendor/lib(64)/libozoaudio.so
+      - /vendor/lib(64)/libozoc2store.so
+      - /vendor/bin/hw/vendor.ozoaudio.media.c2@1.0-service
+      - If Ozo effect is included, then also
+        - /vendor/lib(64)/soundfx/libozoprocessing.so
+    - adb shell find /system -name "*ozo*"
+      - /system/lib/libozoaudio.so
+      - /system/lib/libozoaudioutils.so
+- Verify that OZO Audio Codec2 store has started successfully
+  - adb root
+  - adb shell dmesg | grep -e ozoaudio-media
+    ... init: starting service 'vendor-ozoaudio-media-c2-hal-1-0'...
+
+- Integration can be tested with OZO Audio test application
+  - mmm frameworks/base/media/tests/OzoAudioTest
+  - adb install -t -g out/target/product/flame/testcases/ozoaudiotest/arm64/ozoaudiotest.apk

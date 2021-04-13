@@ -33,6 +33,8 @@ cc_library_static {
         "frameworks/av/media/libavextensions",
         "frameworks/av/media/libmediaplayerservice",
         "frameworks/av/media/libmediaextractor",
+        "frameworks/av/media/libozoaudio",
+        "frameworks/av/media/libozoaudio/include",
     ],
 
     cflags: [

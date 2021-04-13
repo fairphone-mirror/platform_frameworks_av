@@ -14,6 +14,18 @@
  * limitations under the License.
  */
 
+/*
+Copyright (C) 2020 Nokia Corporation.
+This material, including documentation and any related
+computer programs, is protected by copyright controlled by
+Nokia Corporation. All rights are reserved. Copying,
+including reproducing, storing, adapting or translating, any
+or all of this material requires the prior written consent of
+Nokia Corporation. This material also contains confidential
+information which may not be disclosed to others without the
+prior written consent of Nokia Corporation.
+*/
+
 //#define LOG_NDEBUG 0
 #define LOG_TAG "MediaCodecSource"
 #define DEBUG_DRIFT_TIME 0
@@ -40,7 +52,7 @@
 #include <media/stagefright/Utils.h>
 #include <stagefright/AVExtensions.h>
 #include <OMX_Core.h>
-
+#include <media/stagefright/IMediaCodecEvent.h>
 namespace android {
 
 const int32_t kDefaultSwVideoEncoderFormat = HAL_PIXEL_FORMAT_YCbCr_420_888;
@@ -395,6 +407,13 @@ status_t MediaCodecSource::setStopTimeUs(int64_t stopTimeUs) {
     return postSynchronouslyAndReturnError(msg);
 }
 
+status_t MediaCodecSource::setRuntimeParameters(const sp<AMessage> &msg) {
+    sp<AMessage> dst = msg->dup();
+    dst->setWhat(kWhatSetRuntimeParams);
+    dst->setTarget(mReflector);
+    return postSynchronouslyAndReturnError(dst);
+}
+
 status_t MediaCodecSource::pause(MetaData* params) {
     sp<AMessage> msg = new AMessage(kWhatPause, mReflector);
     msg->setObject("meta", params);
@@ -422,6 +441,14 @@ status_t MediaCodecSource::read(
     }
     if (!output->mEncoderReachedEOS) {
         *buffer = *output->mBufferQueue.begin();
+
+        // Handle codec buffer notifications
+        if (this->mCodecBufferPacketizer)
+            mCodecBufferPacketizer->notify(*buffer);
+        // Handle event notifications
+        if (this->mCodecEventListener)
+            mCodecEventListener->notify(*buffer);
+
         output->mBufferQueue.erase(output->mBufferQueue.begin());
         return OK;
     }
@@ -458,7 +485,9 @@ MediaCodecSource::MediaCodecSource(
       mGeneration(0),
       mPrevBufferTimestampUs(0),
       mIsHFR(false),
-      mBatchSize(0){
+      mBatchSize(0),
+	  mCodecEventListener(0),
+      mCodecBufferPacketizer(0){
     CHECK(mLooper != NULL);
 
     if (!(mFlags & FLAG_USE_SURFACE_INPUT)) {
@@ -974,6 +1003,13 @@ void MediaCodecSource::onMessageReceived(const sp<AMessage> &msg) {
                             timeUs, timeUs / 1E6, driftTimeUs);
                 }
                 mbuf->meta_data().setInt64(kKeyTime, timeUs);
+
+                // Handle codec buffer packetization
+                // Call only once even if both handles are present
+                if (this->mCodecBufferPacketizer)
+                    this->mCodecBufferPacketizer->notify(outbuf, mbuf);
+                else if (this->mCodecEventListener)
+                    this->mCodecEventListener->notify(outbuf, mbuf);
             } else {
                 mbuf->meta_data().setInt64(kKeyTime, 0LL);
                 mbuf->meta_data().setInt32(kKeyIsCodecConfig, true);
@@ -1161,6 +1197,19 @@ void MediaCodecSource::onMessageReceived(const sp<AMessage> &msg) {
         response->postReply(replyID);
         break;
     }
+    case kWhatSetRuntimeParams:
+    {
+        sp<AReplyToken> replyID;
+        CHECK(msg->senderAwaitsResponse(&replyID));
+        msg->setObject("replyID", replyID);
+
+        status_t err = mEncoder->setParameters(msg);
+
+        sp<AMessage> response = new AMessage;
+        response->setInt32("err", err);
+        response->postReply(replyID);
+        break;
+    }
     default:
         TRESPASS();
     }
@@ -1173,4 +1222,15 @@ void MediaCodecSource::notifyPerformanceMode() {
         mEncoder->setParameters(params);
     }
 }
-} // namespace android
+
+void
+MediaCodecSource::setCodecEventListener(IMediaCodecEventListener *listener)
+{
+    this->mCodecEventListener = listener;
+}
+
+void
+MediaCodecSource::setCodecBufferPacketizer(IMediaCodecEventListener *packetizer)
+{
+    this->mCodecBufferPacketizer = packetizer;
+}} // namespace android
