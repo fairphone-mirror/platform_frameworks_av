@@ -112,6 +112,7 @@ typedef struct ozoaudio_module_t
 static void
 ozoaudio_object_release(ozoaudio_object_t *object)
 {
+    ALOGV("ozo ozoaudio_object_release()");
     if (object->buffer)
         delete object->buffer;
     object->buffer = nullptr;
@@ -133,6 +134,7 @@ ozoaudio_object_release(ozoaudio_object_t *object)
 static int
 ozoaudio_object_create(ozoaudio_module_t *module)
 {
+    ALOGV("ozo ozoaudio_object_create()");
     ozoaudio_object_t *object = &module->context;
 
     ozoaudio_object_release(object);
@@ -185,6 +187,7 @@ ozoaudio_object_create(ozoaudio_module_t *module)
 static const effect_handle_t *
 capture_create(ozoaudio_module_t *module)
 {
+    ALOGV("ozo capture_create()");
     module->context.frames = 0;
     module->context.state = OZOAUDIO_STATE_CREATED;
 
@@ -223,6 +226,7 @@ capture_create(ozoaudio_module_t *module)
 static void
 capture_release(ozoaudio_module_t *module)
 {
+    ALOGV("ozo capture_release()");
     ozoaudio_object_release(&module->context);
 
     for (size_t i = 0; i < module->context.params->eventEmitters.size(); i++)
@@ -237,7 +241,7 @@ capture_release(ozoaudio_module_t *module)
 static int
 capture_init(ozoaudio_module_t *module)
 {
-    ALOGV("capture_init()");
+    ALOGV("ozo capture_init()");
 
     if (module == NULL)
         return -EINVAL;
@@ -271,7 +275,7 @@ capture_init(ozoaudio_module_t *module)
 static int
 capture_setconfig(ozoaudio_module_t *module, effect_config_t *config)
 {
-    ALOGV("capture_setconfig()");
+    ALOGV("ozo capture_setconfig()");
 
     // Rules when config change is allowed:
     // - Input and output sample rate must be the same and 48000Hz
@@ -301,7 +305,7 @@ capture_setconfig(ozoaudio_module_t *module, effect_config_t *config)
     }
 
     if (config->inputCfg.format != AUDIO_FORMAT_PCM_16_BIT) {
-        ALOGE("Unsupported format (only 16-bit supported): %i", config->inputCfg.format);
+        ALOGE("ozo capture_setconfig() Unsupported format (only 16-bit supported): %i", config->inputCfg.format);
         return -EINVAL;
     }
 
@@ -312,7 +316,7 @@ capture_setconfig(ozoaudio_module_t *module, effect_config_t *config)
     }
 
     module->config = *config;
-
+    ALOGV("ozo capture_setconfig() return OK");
     return 0;
 }
 
@@ -327,6 +331,7 @@ capture_getconfig(ozoaudio_module_t *module, effect_config_t *config)
 static int
 capture_enable(ozoaudio_module_t *module)
 {
+    ALOGV("ozo capture_enable()");
     if (module->context.state != OZOAUDIO_STATE_CREATED)
         return -ENOSYS;
 
@@ -334,6 +339,7 @@ capture_enable(ozoaudio_module_t *module)
     if (result == 0)
         module->context.state = OZOAUDIO_STATE_ACTIVE;
 
+    ALOGV("ozo capture_enable() OK");
     return result;
 }
 
@@ -341,6 +347,7 @@ capture_enable(ozoaudio_module_t *module)
 static int
 capture_disable(ozoaudio_module_t *module)
 {
+    ALOGV("ozo capture_disable()");
     if (module->context.state != OZOAUDIO_STATE_ACTIVE)
         return -ENOSYS;
 
@@ -354,6 +361,7 @@ capture_disable(ozoaudio_module_t *module)
 static int
 capture_getparameter(ozoaudio_module_t *module, int32_t param, uint32_t *pSize, void *pValue)
 {
+    ALOGV("ozo capture_getparameter()");
     switch (param) {
         // Device UUID
         case OZO_PARAM_DEVICE_UUID: {
@@ -409,6 +417,7 @@ capture_getparameter(ozoaudio_module_t *module, int32_t param, uint32_t *pSize, 
 static int
 capture_setparameter(ozoaudio_module_t *module, int32_t param, uint32_t size, void *pValue)
 {
+    ALOGV("ozo capture_setparameter()");
     char tmp[64];
 
     switch (param) {
@@ -461,6 +470,7 @@ capture_setparameter(ozoaudio_module_t *module, int32_t param, uint32_t size, vo
 static void
 process_getparameter(ozoaudio_module_t *module)
 {
+    ALOGV("ozo process_getparameter()");
     for (size_t i = 0; i < module->context.params->eventEmitters.size(); i++) {
         int *data;
         int event = 0, dataLen = 0;
@@ -489,6 +499,7 @@ process_getparameter(ozoaudio_module_t *module)
 static int
 Capture_Process(effect_handle_t self, audio_buffer_t *inBuffer, audio_buffer_t *outBuffer)
 {
+    ALOGV("ozo Capture_Process()");
     ozoaudio_module_t *module = (ozoaudio_module_t *) self;
 
     if (module == NULL || inBuffer == NULL || outBuffer == NULL) {
@@ -544,7 +555,7 @@ Capture_Process(effect_handle_t self, audio_buffer_t *inBuffer, audio_buffer_t *
         return -EINVAL;
     }
 
-    ALOGV("Capture_Process(): %zu %u %u %u %zu %zu %zu %zu %p 0x%x %zu",
+    ALOGV("ozo Capture_Process(): %zu %u %u %u %zu %zu %zu %zu %p 0x%x %zu",
         module->context.frames, module->config.inputCfg.format,
         module->config.inputCfg.channels, module->config.outputCfg.channels,
         inBuffer->frameCount, outBuffer->frameCount, inChannels, outChannels,
@@ -614,7 +625,7 @@ Capture_Process(effect_handle_t self, audio_buffer_t *inBuffer, audio_buffer_t *
             memcpy(outBuffer->s16, module->context.input, sampleCount * sizeof(int16_t));
 
     } else {
-        ALOGV("No output data available");
+        ALOGV("ozo No output data available");
         if (HALcall)
             memset(outBuffer->raw, 0, sampleCount * audio_bytes_per_sample(informat));
         else
@@ -633,7 +644,7 @@ Capture_Command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize, void *
 {
     ozoaudio_module_t *module = (ozoaudio_module_t *) self;
 
-    ALOGV("Capture_Command %" PRIu32 " cmdSize %" PRIu32, cmdCode, cmdSize);
+    ALOGV("ozo Capture_Command %" PRIu32 " cmdSize %" PRIu32, cmdCode, cmdSize);
 
     if (module == NULL) {
         return -EINVAL;
@@ -778,7 +789,7 @@ Capture_GetDescriptor(effect_handle_t self, effect_descriptor_t *pDescriptor)
 {
     ozoaudio_module_t *module = (ozoaudio_module_t *) self;
 
-    ALOGD("Capture_GetDescriptor");
+    ALOGD("ozo Capture_GetDescriptor");
 
     if (module == NULL) {
         return -EINVAL;
@@ -840,16 +851,16 @@ Create(const effect_uuid_t *uuid, int32_t /*sessionId*/, int32_t /*ioId*/, effec
     size_t index = 0;
     ozoaudio_module_t *module;
 
-    ALOGV("Create() for uuid=%s", uuid2Char(uuid, buffer));
+    ALOGV("ozo Create() for uuid=%s", uuid2Char(uuid, buffer));
 
     if (Ozo_GetDescriptor(uuid, index) == NULL) {
-        ALOGE("Create: Descriptor not found for uuid=%s", uuid2Char(uuid, buffer));
+        ALOGE("ozo Create: Descriptor not found for uuid=%s", uuid2Char(uuid, buffer));
         return -EINVAL;
     }
 
     module = (ozoaudio_module_t *) calloc(1, sizeof(ozoaudio_module_t));
     if (module == NULL) {
-        ALOGE("Create: Unable to create module");
+        ALOGE("ozo Create: Unable to create module");
         return -ENOMEM;
     }
 
@@ -865,13 +876,13 @@ Release(effect_handle_t interface)
 {
     ozoaudio_module_t *module = (ozoaudio_module_t *) interface;
 
-    ALOGV("Release()");
+    ALOGV("ozo Release()");
 
     if (interface == NULL) {
         return -EINVAL;
     }
 
-    ALOGV("# of frames processed: %zu", module->context.frames);
+    ALOGV("# ozo of frames processed: %zu", module->context.frames);
     capture_release(module);
     free(module);
 
@@ -884,7 +895,7 @@ GetDescriptor(const effect_uuid_t *uuid, effect_descriptor_t *pDescriptor)
     char buffer[64];
     size_t index = 0;
 
-    ALOGV("GetDescriptor() for uuid=%s", uuid2Char(uuid, buffer));
+    ALOGV("ozo GetDescriptor() for uuid=%s", uuid2Char(uuid, buffer));
 
     if (pDescriptor == NULL || uuid == NULL) {
         return -EINVAL;
@@ -892,12 +903,12 @@ GetDescriptor(const effect_uuid_t *uuid, effect_descriptor_t *pDescriptor)
 
     auto desc = Ozo_GetDescriptor(uuid, index);
     if (desc == NULL) {
-        ALOGE("GetDescriptor: Descriptor not found for uuid=%s", uuid2Char(uuid, buffer));
+        ALOGE("ozo GetDescriptor: Descriptor not found for uuid=%s", uuid2Char(uuid, buffer));
         return  -EINVAL;
     }
 
     *pDescriptor = *desc;
-
+    ALOGV("ozo GetDescriptor() return OK");
     return 0;
 }
 
