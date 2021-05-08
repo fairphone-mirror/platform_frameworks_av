@@ -230,6 +230,7 @@ cc_library {
         "-Wextra",
         "-Werror",
         "-Wno-ignored-qualifiers",
+        "-D__FP_CAMERA__",
     ],
 }
 
@@ -280,5 +281,6 @@ cc_library_static {
         "-Wextra",
         "-Werror",
         "-Wno-ignored-qualifiers",
+        "-D__FP_CAMERA__",
     ],
 }
