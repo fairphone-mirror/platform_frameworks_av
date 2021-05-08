@@ -78,6 +78,13 @@
 #include "utils/CameraThreadState.h"
 #include "utils/CameraServiceProxyWrapper.h"
 
+#ifdef __FP_CAMERA__
+#define PROPERTY_CAMERA_PACKAGENAME     "vendor.debug.camera.pkgname"
+#define CAMERA_PACKNAME_CTSVERIFIER     "com.android.cts.verifier"
+#define CAMERA_PACKNAME_CTS             "android.camera.cts"
+#define CAMERA_PACKNAME_FP              "com.fp.camera"
+#endif
+
 namespace {
     const char* kPermissionServiceName = "permission";
 }; // namespace anonymous
@@ -138,6 +145,10 @@ static constexpr int32_t kSystemNativeClientState =
 
 const String8 CameraService::kOfflineDevice("offline-");
 const String16 CameraService::kWatchAllClientsFlag("all");
+
+#ifdef __FP_CAMERA__
+bool m_isNeedFlushPkgName = false;
+#endif
 
 // Set to keep track of logged service error events.
 static std::set<String8> sServiceErrorEventSet;
@@ -816,7 +827,21 @@ Status CameraService::getCameraCharacteristics(const String16& cameraId,
                     strerror(-res), res);
         }
     }
+#ifdef __FP_CAMERA__
+    char  mClientPackageName[PROPERTY_VALUE_MAX];
+    property_get(PROPERTY_CAMERA_PACKAGENAME, mClientPackageName, "");
+    bool m_isCTSVerifyCamera = !strncmp(mClientPackageName,
+                            CAMERA_PACKNAME_CTSVERIFIER,
+                            strlen(CAMERA_PACKNAME_CTSVERIFIER));
+ 
+    bool m_isCTScamera = !strncmp(mClientPackageName,CAMERA_PACKNAME_CTS,
+                            strlen(CAMERA_PACKNAME_CTS));
+    bool m_isFPCamera = !strncmp(mClientPackageName,CAMERA_PACKNAME_FP,strlen(CAMERA_PACKNAME_FP));
+    bool m_isThirdCamera = !(m_isCTScamera||m_isCTSVerifyCamera||m_isFPCamera);
 
+
+    m_isNeedFlushPkgName = m_isFPCamera || m_isThirdCamera;
+#endif
     return ret;
 }
 
@@ -1757,6 +1782,10 @@ Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const String8&
     String8 clientName8(clientPackageName);
 
     int originalClientPid = 0;
+
+#ifdef __FP_CAMERA__
+    property_set(PROPERTY_CAMERA_PACKAGENAME, clientName8.string());
+#endif
 
     ALOGI("CameraService::connect call (PID %d \"%s\", camera ID %s) and "
             "Camera API version %d", clientPid, clientName8.string(), cameraId.string(),
@@ -3337,6 +3366,15 @@ binder::Status CameraService::BasicClient::disconnect() {
 
     // client shouldn't be able to call into us anymore
     mClientPid = 0;
+
+#ifdef __FP_CAMERA__
+    if(m_isNeedFlushPkgName)
+    {
+        property_set(PROPERTY_CAMERA_PACKAGENAME, "");
+        m_isNeedFlushPkgName = false;
+        ALOGV("%s Flush camera pkgname",__FUNCTION__);
+    }
+#endif
 
     return res;
 }
