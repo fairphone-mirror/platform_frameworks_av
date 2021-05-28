@@ -1,0 +1,86 @@
+cc_defaults {
+    name: "libcodec2-ozo-defaults",
+
+    include_dirs: [
+        "system/core/liblog/include",
+        "system/core/libutils/include",
+        "system/core/libcutils/include",
+        "hardware/libhardware/include",
+        "system/core/libsystem/include",
+        "frameworks/av/media/codec2/vndk/include",
+        "frameworks/av/media/codec2/core/include",
+        "frameworks/av/media/libstagefright/include",
+        "frameworks/av/media/libstagefright/foundation/include",
+    ],
+
+    shared_libs: [
+        "libbase",
+        "liblog",
+        "libutils",
+        "libcodec2_vndk",
+        "libstagefright_foundation",
+    ],
+
+    static_libs: [
+        "libcodec2_soft_ozocommon"
+    ],
+}
+
+cc_defaults {
+    name: "libcodec2-ozostore-defaults",
+
+    include_dirs: [
+        "frameworks/av/services/ozoaudio/store",
+    ],
+
+    shared_libs: [
+        "libozoc2store",
+    ],
+}
+
+cc_library_shared {
+    name: "libcodec2_soft_ozodec",
+    vendor: true,
+    defaults: [
+        "libcodec2-ozo-defaults",
+        "libcodec2-ozostore-defaults",
+    ],
+
+    srcs: [
+        "C2SoftOzoDec.cpp",
+    ],
+
+    include_dirs: [
+        "frameworks/av/media/libozoaudio/include",
+        "frameworks/av/media/libozoaudio/ozoaudiodec"
+    ],
+
+    shared_libs: [
+        "libav_ozodecoder",
+        "libav_ozoencoder",
+    ],
+}
+
+cc_library_shared {
+    name: "libcodec2_soft_ozoenc",
+    vendor: true,
+    defaults: [
+        "libcodec2-ozo-defaults",
+        "libcodec2-ozostore-defaults"
+    ],
+
+    srcs: [
+        "C2SoftOzoEnc.cpp"
+    ],
+
+    include_dirs: [
+        "external/aac/libAACenc/include",
+        "external/aac/libSYS/include",
+        "frameworks/av/media/libozoaudio/include",
+        "frameworks/av/media/libozoaudio/ozoaudioenc"
+    ],
+
+    shared_libs: [
+        "libav_ozoencoder",
+    ],
+}

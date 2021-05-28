@@ -10,6 +10,9 @@ cc_library_shared {
         "StagefrightMetadataRetriever.cpp",
         "StagefrightRecorder.cpp",
         "TestPlayerStub.cpp",
+        "OzoAudioFileSource.cpp",
+        "OzoAudioWaveFileSource.cpp",
+        "wavformat.cpp",
         "ozoCodecEventListener.cpp",
         "OzoStagefright.cpp"
     ],

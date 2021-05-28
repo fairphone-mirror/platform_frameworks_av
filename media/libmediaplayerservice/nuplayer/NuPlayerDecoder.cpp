@@ -14,6 +14,18 @@
  * limitations under the License.
  */
 
+/*
+Copyright (C) 2020 Nokia Corporation.
+This material, including documentation and any related
+computer programs, is protected by copyright controlled by
+Nokia Corporation. All rights are reserved. Copying,
+including reproducing, storing, adapting or translating, any
+or all of this material requires the prior written consent of
+Nokia Corporation. This material also contains confidential
+information which may not be disclosed to others without the
+prior written consent of Nokia Corporation.
+*/
+
 //#define LOG_NDEBUG 0
 #define LOG_TAG "NuPlayerDecoder"
 #include <utils/Log.h>
@@ -45,6 +57,7 @@
 #include <gui/Surface.h>
 
 #include "ATSParser.h"
+#include "ozoaudiodec/ozoplayer.h"
 
 namespace android {
 
@@ -160,6 +173,9 @@ void NuPlayer::Decoder::onMessageReceived(const sp<AMessage> &msg) {
                 {
                     int32_t index;
                     CHECK(msg->findInt32("index", &index));
+
+                    if (mOzoPlayCtrl.get())
+                        mOzoPlayCtrl->signal(mCodec);
 
                     handleAnInputBuffer(index);
                     break;
@@ -299,6 +315,8 @@ void NuPlayer::Decoder::onConfigure(const sp<AMessage> &format) {
 
     mIsAudio = !strncasecmp("audio/", mime.c_str(), 6);
     mIsVideoAVC = !strcasecmp(MEDIA_MIMETYPE_VIDEO_AVC, mime.c_str());
+
+    if (mIsAudio) tryOzoAudioConfigure(format, mime, mOzoPlayCtrl);
 
     mComponentName = mime;
     mComponentName.append(" decoder");
