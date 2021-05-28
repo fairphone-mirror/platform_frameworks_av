@@ -15,18 +15,6 @@
  ** limitations under the License.
  */
 
-/*
-Copyright (C) 2020 Nokia Corporation.
-This material, including documentation and any related
-computer programs, is protected by copyright controlled by
-Nokia Corporation. All rights are reserved. Copying,
-including reproducing, storing, adapting or translating, any
-or all of this material requires the prior written consent of
-Nokia Corporation. This material also contains confidential
-information which may not be disclosed to others without the
-prior written consent of Nokia Corporation.
-*/
-
 //#define LOG_NDEBUG 0
 #define LOG_TAG "MediaRecorder"
 
@@ -394,44 +382,6 @@ status_t MediaRecorder::setNextOutputFile(int fd)
     return ret;
 }
 
-status_t MediaRecorder::setOzoAudioTuneFile(int fd)
-{
-    ALOGV("setOzoAudioTuneFile(%d)", fd);
-    if (mMediaRecorder == NULL) {
-        ALOGE("media recorder is not initialized yet");
-        return INVALID_OPERATION;
-    }
-    if (!(mCurrentState & MEDIA_RECORDER_DATASOURCE_CONFIGURED)) {
-        ALOGE("setOzoAudioTuneFile called in an invalid state(%d)", mCurrentState);
-        return INVALID_OPERATION;
-    }
-
-    // It appears that if an invalid file descriptor is passed through
-    // binder calls, the server-side of the inter-process function call
-    // is skipped. As a result, the check at the server-side to catch
-    // the invalid file descritpor never gets invoked. This is to workaround
-    // this issue by checking the file descriptor first before passing
-    // it through binder call.
-    int flags = fcntl(fd, F_GETFL);
-    if (flags == -1) {
-        ALOGE("Fail to get file status flags err: %s", strerror(errno));
-    }
-    // fd must be in read-write mode or write-only mode.
-    if ((flags & (O_RDWR | O_WRONLY)) == 0) {
-        ALOGE("File descriptor is not in read-write mode or write-only mode");
-        return BAD_VALUE;
-    }
-
-    status_t ret = mMediaRecorder->setOzoAudioTuneFile(fd);
-    if (OK != ret) {
-        ALOGE("setOzoAudioTuneFile failed: %d", ret);
-        mCurrentState = MEDIA_RECORDER_ERROR;
-        return ret;
-    }
-
-    return ret;
-}
-
 status_t MediaRecorder::setVideoSize(int width, int height)
 {
     ALOGV("setVideoSize(%d, %d)", width, height);
@@ -540,27 +490,6 @@ status_t MediaRecorder::setParameters(const String8& params) {
         // Do not change our current state to MEDIA_RECORDER_ERROR, failures
         // of the only currently supported parameters, "max-duration" and
         // "max-filesize" are _not_ fatal.
-    }
-
-    return ret;
-}
-
-status_t MediaRecorder::setOzoRunTimeParameters(const String8& params) {
-    ALOGV("setOzoRunTimeParameters(%s)", params.string());
-    if (mMediaRecorder == NULL) {
-        ALOGE("media recorder is not initialized yet");
-        return INVALID_OPERATION;
-    }
-
-    bool isInvalidState = (mCurrentState & (MEDIA_RECORDER_PREPARED | MEDIA_RECORDER_ERROR));
-    if (isInvalidState) {
-        ALOGE("setOzoRunTimeParameters is called in an invalid state: %d", mCurrentState);
-        return INVALID_OPERATION;
-    }
-
-    status_t ret = mMediaRecorder->setOzoRunTimeParameters(params);
-    if (OK != ret) {
-        ALOGE("setOzoRunTimeParameters(%s) failed: %d", params.string(), ret);
     }
 
     return ret;

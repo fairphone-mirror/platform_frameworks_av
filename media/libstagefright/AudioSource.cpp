@@ -14,18 +14,6 @@
  * limitations under the License.
  */
 
-/*
-Copyright (C) 2020 Nokia Corporation.
-This material, including documentation and any related
-computer programs, is protected by copyright controlled by
-Nokia Corporation. All rights are reserved. Copying,
-including reproducing, storing, adapting or translating, any
-or all of this material requires the prior written consent of
-Nokia Corporation. This material also contains confidential
-information which may not be disclosed to others without the
-prior written consent of Nokia Corporation.
-*/
-
 #include <inttypes.h>
 #include <stdlib.h>
 
@@ -68,7 +56,7 @@ AudioSource::AudioSource(
         uint32_t sampleRate, uint32_t channelCount, uint32_t outSampleRate,
         uid_t uid, pid_t pid, audio_port_handle_t selectedDeviceId,
         audio_microphone_direction_t selectedMicDirection,
-        float selectedMicFieldDimension, int64_t channelMask)
+        float selectedMicFieldDimension)
     : mStarted(false),
       mSampleRate(sampleRate),
       mOutSampleRate(outSampleRate > 0 ? outSampleRate : sampleRate),
@@ -112,12 +100,9 @@ AudioSource::AudioSource(
             bufCount++;
         }
 
-        audio_channel_mask_t mask =
-            channelMask == -1 ? audio_channel_in_mask_from_count(channelCount) :
-                (audio_channel_mask_t) channelMask;
         mRecord = new AudioRecord(
                     AUDIO_SOURCE_DEFAULT, sampleRate, AUDIO_FORMAT_PCM_16_BIT,
-                    mask,
+                    audio_channel_in_mask_from_count(channelCount),
                     opPackageName,
                     (size_t) (bufCount * frameCount),
                     AudioRecordCallbackFunction,

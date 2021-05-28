@@ -14,18 +14,6 @@
  ** limitations under the License.
  */
 
-/*
-Copyright (C) 2020 Nokia Corporation.
-This material, including documentation and any related
-computer programs, is protected by copyright controlled by
-Nokia Corporation. All rights are reserved. Copying,
-including reproducing, storing, adapting or translating, any
-or all of this material requires the prior written consent of
-Nokia Corporation. This material also contains confidential
-information which may not be disclosed to others without the
-prior written consent of Nokia Corporation.
-*/
-
 //#define LOG_NDEBUG 0
 #define LOG_TAG "MediaRecorderService"
 #include <utils/Log.h>
@@ -230,17 +218,6 @@ status_t MediaRecorderClient::setNextOutputFile(int fd)
     return mRecorder->setNextOutputFile(fd);
 }
 
-status_t MediaRecorderClient::setOzoAudioTuneFile(int fd)
-{
-    ALOGV("setOzoAudioTuneFile(%d)", fd);
-    Mutex::Autolock lock(mLock);
-    if (mRecorder == NULL) {
-        ALOGE("recorder is not initialized");
-        return NO_INIT;
-    }
-    return mRecorder->setOzoAudioTuneFile(fd);
-}
-
 status_t MediaRecorderClient::setVideoSize(int width, int height)
 {
     ALOGV("setVideoSize(%dx%d)", width, height);
@@ -271,16 +248,6 @@ status_t MediaRecorderClient::setParameters(const String8& params) {
         return NO_INIT;
     }
     return mRecorder->setParameters(params);
-}
-
-status_t MediaRecorderClient::setOzoRunTimeParameters(const String8& params) {
-    ALOGV("setOzoRunTimeParameters(%s)", params.string());
-    Mutex::Autolock lock(mLock);
-    if (mRecorder == NULL) {
-        ALOGE("recorder is not initialized");
-        return NO_INIT;
-    }
-    return mRecorder->setOzoRunTimeParameters(params);
 }
 
 status_t MediaRecorderClient::prepare()

@@ -14,18 +14,6 @@
  * limitations under the License.
  */
 
-/*
-Copyright (C) 2020 Nokia Corporation.
-This material, including documentation and any related
-computer programs, is protected by copyright controlled by
-Nokia Corporation. All rights are reserved. Copying,
-including reproducing, storing, adapting or translating, any
-or all of this material requires the prior written consent of
-Nokia Corporation. This material also contains confidential
-information which may not be disclosed to others without the
-prior written consent of Nokia Corporation.
-*/
-
 #ifndef MediaCodecSource_H_
 #define MediaCodecSource_H_
 
@@ -42,8 +30,6 @@ struct AMessage;
 struct AReplyToken;
 class IGraphicBufferProducer;
 struct MediaCodec;
-class MetaData;
-class IMediaCodecEventListener;
 
 struct MediaCodecSource : public MediaSource,
                           public MediaBufferObserver {
@@ -84,9 +70,7 @@ struct MediaCodecSource : public MediaSource,
     // for AHandlerReflector
     void onMessageReceived(const sp<AMessage> &msg);
 
-    status_t setRuntimeParameters(const sp<AMessage> &msg);
-    void setCodecEventListener(IMediaCodecEventListener *listener);
-    void setCodecBufferPacketizer(IMediaCodecEventListener *packetizer);
+
 
 protected:
     virtual ~MediaCodecSource();
@@ -104,7 +88,6 @@ private:
         kWhatSetStopTimeUs,
         kWhatGetFirstSampleSystemTimeUs,
         kWhatStopStalled,
-        kWhatSetRuntimeParams,
     };
 
     MediaCodecSource(
@@ -180,9 +163,7 @@ private:
     int64_t mPrevBufferTimestampUs;
     bool mIsHFR;
     int32_t mBatchSize;
-	
-    IMediaCodecEventListener *mCodecEventListener;
-    IMediaCodecEventListener *mCodecBufferPacketizer;
+
     DISALLOW_EVIL_CONSTRUCTORS(MediaCodecSource);
 };
 

@@ -6,7 +6,6 @@
         <interface>
             <name>IComponentStore</name>
             <instance>software</instance>
-            <!--<instance>ozoaudio</instance>-->
         </interface>
     </hal>
 </manifest>

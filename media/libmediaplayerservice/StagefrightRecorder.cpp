@@ -14,18 +14,6 @@
  * limitations under the License.
  */
 
-/*
-Copyright (C) 2020 Nokia Corporation.
-This material, including documentation and any related
-computer programs, is protected by copyright controlled by
-Nokia Corporation. All rights are reserved. Copying,
-including reproducing, storing, adapting or translating, any
-or all of this material requires the prior written consent of
-Nokia Corporation. This material also contains confidential
-information which may not be disclosed to others without the
-prior written consent of Nokia Corporation.
-*/
-
 //#define LOG_NDEBUG 0
 #define LOG_TAG "StagefrightRecorder"
 #include <inttypes.h>
@@ -65,7 +53,6 @@ prior written consent of Nokia Corporation.
 #include <media/stagefright/PersistentSurface.h>
 #include <media/MediaProfiles.h>
 #include <camera/CameraParameters.h>
-#include <media/stagefright/IMediaCodecEvent.h>
 
 #include <utils/Errors.h>
 #include <sys/types.h>
@@ -75,11 +62,6 @@ prior written consent of Nokia Corporation.
 #include <system/audio.h>
 
 #include "ARTPWriter.h"
-
-#include "OzoAudioFileSource.h"
-#include "ozoCodecEventListener.h"
-#include "OzoStagefright.h"
-
 #include <stagefright/AVExtensions.h>
 
 namespace android {
@@ -145,11 +127,7 @@ StagefrightRecorder::StagefrightRecorder(const String16 &opPackageName)
       mSelectedDeviceId(AUDIO_PORT_HANDLE_NONE),
       mDeviceCallbackEnabled(false),
       mSelectedMicDirection(MIC_DIRECTION_UNSPECIFIED),
-      mSelectedMicFieldDimension(MIC_FIELD_DIMENSION_NORMAL),
-      mOzoAudioParams(new struct OzoAudioParamsStagefright),
-      mOzoBrandEnabled(false),
-      mCodecEventListener(nullptr),
-      mOzoTuneWriter(nullptr) {
+      mSelectedMicFieldDimension(MIC_FIELD_DIMENSION_NORMAL) {
 
     ALOGV("Constructor");
 
@@ -168,15 +146,6 @@ StagefrightRecorder::~StagefrightRecorder() {
     // log the current record, provided it has some information worth recording
     // NB: this also reclaims & clears mMetricsItem.
     flushAndResetMetrics(false);
-
-    delete mOzoAudioParams;
-
-    if (mCodecEventListener != nullptr) {
-        delete mCodecEventListener;
-        mCodecEventListener = nullptr;
-    }
-
-    this->closeOzoAudioTuneFile();
 }
 
 void StagefrightRecorder::updateMetrics() {
@@ -924,12 +893,9 @@ status_t StagefrightRecorder::setParameter(
         if (safe_strtod(value.string(), &fps)) {
             return setParamCaptureFps(fps);
         }
+    } else {
+        ALOGE("setParameter: failed to find key %s", key.string());
     }
-
-    if (OzoAudioSetParameterStagefright(*mOzoAudioParams, mOzoFileSourceEnable, key, value))
-        return OK;
-
-    ALOGE("setParameter: failed to find key %s", key.string());
     return BAD_VALUE;
 }
 
@@ -966,74 +932,6 @@ status_t StagefrightRecorder::setParameters(const String8 &params) {
         key_start = semicolon_pos + 1;
     }
     return OK;
-}
-
-status_t StagefrightRecorder::setOzoAudioTuneFile(int fd)
-{
-    this->closeOzoAudioTuneFile();
-
-    if (fd > 0) {
-        auto writer = new OzoCodecPostDataWriter();
-        if (!writer->init(fd)) {
-            delete writer;
-            return BAD_VALUE;
-        }
-        else
-            mOzoTuneWriter = writer;
-
-        return OK;
-    }
-
-    return BAD_VALUE;
-}
-
-void
-StagefrightRecorder::closeOzoAudioTuneFile()
-{
-    if (mOzoTuneWriter)
-        delete mOzoTuneWriter;
-    mOzoTuneWriter = nullptr;
-}
-
-status_t StagefrightRecorder::setOzoRunTimeParameters(const String8 &params) {
-    ALOGV("setOzoRunTimeParameters: %s", params.string());
-
-    if (mOzoAudioParams->device_id.length() == 0) {
-        ALOGW("OZO Audio disabled, device ID not set");
-        return OK;
-    }
-
-    const char *cparams = params.string();
-    const char *key_start = cparams;
-    sp<AMessage> message = new AMessage;
-    for (;;) {
-        const char *equal_pos = strchr(key_start, '=');
-        if (equal_pos == NULL) {
-            ALOGE("Parameters %s miss a value", cparams);
-            return BAD_VALUE;
-        }
-        String8 key(key_start, equal_pos - key_start);
-        TrimString(&key);
-        if (key.length() == 0) {
-            ALOGE("Parameters %s contains an empty key", cparams);
-            return BAD_VALUE;
-        }
-        const char *value_start = equal_pos + 1;
-        const char *semicolon_pos = strchr(value_start, ';');
-        String8 value;
-        if (semicolon_pos == NULL) {
-            value.setTo(value_start);
-        } else {
-            value.setTo(value_start, semicolon_pos - value_start);
-        }
-        message->setString((const char *) key, (const char *) value);
-        if (semicolon_pos == NULL) {
-            break;  // Reaches the end
-        }
-        key_start = semicolon_pos + 1;
-    }
-
-    return mAudioEncoderSource->setRuntimeParameters(message);
 }
 
 status_t StagefrightRecorder::setListener(const sp<IMediaRecorderClient> &listener) {
@@ -1203,7 +1101,6 @@ status_t StagefrightRecorder::start() {
 }
 
 sp<MediaCodecSource> StagefrightRecorder::createAudioSource() {
-    bool use_ozo_capture = false;
     int32_t sourceSampleRate = mSampleRate;
 
     if (mCaptureFpsEnable && mCaptureFps >= mFrameRate) {
@@ -1249,52 +1146,7 @@ sp<MediaCodecSource> StagefrightRecorder::createAudioSource() {
         }
     }
 
-/*
-    if (mAudioEncoder == AUDIO_ENCODER_AAC && mOutputFormat == OUTPUT_FORMAT_MPEG_4 && mSampleRate == 48000) {
-        use_ozo_capture = true;
-    }
-
-    if (mOzoAudioParams->device_id.length() == 0) {
-        ALOGW("ozo disabled, not using ozo capture");
-        use_ozo_capture = false;
-    }
-
-    status_t err(OK);
-
-    sp<MediaSource> audioSource;
-	//plt changed source code !!!
-    if (use_ozo_capture && mOzoFileSourceEnable) {
-        sp<OzoAudioFileSource> oSource = new OzoAudioFileSource(
-                mAudioSource,
-                mOpPackageName,
-                sourceSampleRate,
-                mOzoAudioParams->num_input_channels,
-                mSampleRate,
-                mClientUid,
-                mClientPid,
-                mSelectedDeviceId);
-        audioSource = oSource;
-        err = oSource->initCheck();
-    } else {
-        sp<AudioSource> aSource = new AudioSource(
-                &attr,
-                //mAudioSource,
-                mOpPackageName,
-                sourceSampleRate,
-                use_ozo_capture ? mOzoAudioParams->num_input_channels : mAudioChannels,
-                mSampleRate,
-                mClientUid,
-                mClientPid,
-                mSelectedDeviceId,
-                mSelectedMicDirection,
-                mSelectedMicFieldDimension,
-                mOzoAudioParams->channel_mask);
-        audioSource = aSource;
-        err = aSource->initCheck();
-        mAudioSourceNode = aSource;
-    }
-*/
-    sp<AudioSource> audioSource = new AudioSource(
+    sp<AudioSource> audioSource = AVFactory::get()->createAudioSource(
                 &attr,
                 mOpPackageName,
                 sourceSampleRate,
@@ -1304,8 +1156,7 @@ sp<MediaCodecSource> StagefrightRecorder::createAudioSource() {
                 mClientPid,
                 mSelectedDeviceId,
                 mSelectedMicDirection,
-                mSelectedMicFieldDimension,
-				mOzoAudioParams->channel_mask);
+                mSelectedMicFieldDimension);
 
     status_t err = audioSource->initCheck();
 
@@ -1359,30 +1210,6 @@ sp<MediaCodecSource> StagefrightRecorder::createAudioSource() {
                 kKeyMaxInputSize, &maxInputSize));
 
     format->setInt32("max-input-size", maxInputSize);
-
-    int32_t channels = mAudioChannels;
-    int32_t samplerate = mSampleRate;
-
-    mOzoBrandEnabled = false;
-    if (use_ozo_capture) {
-        bool monoOutput = (mAudioChannels == 1);
-        if (monoOutput && mOzoAudioParams->encoding_mode == "ozoaudio") {
-            mOzoAudioParams->encoding_mode = "ls";
-        }
-        else if (mOzoAudioParams->encoding_mode == "ozoaudio")
-            mOzoBrandEnabled = use_ozo_capture;
-
-        mAudioBitRate = (monoOutput) ? std::max(mAudioBitRate, 128000) : std::max(mAudioBitRate, 256000);
-
-        sp<MetaData> micFormat = audioSource->getFormat();
-        channels = OzoAudioInitMessageStagefright(*mOzoAudioParams, mOzoTuneWriter ? true : false,
-            format, micFormat, samplerate);
-
-        // Codec event listener needed
-        if (OzoAudioNeedListenerStagefright(*mOzoAudioParams))
-            mCodecEventListener = new OzoCodecEventListener(mListener);
-    }
-
     format->setInt32("channel-count", mAudioChannels);
     format->setInt32("sample-rate", mSampleRate);
     format->setInt32("bitrate", mAudioBitRate);
@@ -1806,8 +1633,6 @@ void StagefrightRecorder::clipNumberOfAudioChannels() {
         mAudioChannels = minChannels;
     }
 
-    // Uncommented for OZO Audio testing
-#if 0
     int maxChannels =
             mEncoderProfiles->getAudioEncoderParamByName(
                 "enc.aud.ch.max", mAudioEncoder);
@@ -1816,7 +1641,6 @@ void StagefrightRecorder::clipNumberOfAudioChannels() {
             " and will be set to (%d)", mAudioChannels, maxChannels);
         mAudioChannels = maxChannels;
     }
-#endif
 }
 
 void StagefrightRecorder::clipVideoFrameHeight() {
@@ -2131,12 +1955,6 @@ status_t StagefrightRecorder::setupAudioEncoder(const sp<MediaWriter>& writer) {
 
     writer->addSource(audioEncoder);
     mAudioEncoderSource = audioEncoder;
-
-    if (mCodecEventListener)
-        mAudioEncoderSource->setCodecEventListener(mCodecEventListener);
-    if (mOzoTuneWriter)
-        mAudioEncoderSource->setCodecBufferPacketizer(mOzoTuneWriter);
-
     return OK;
 }
 
@@ -2212,9 +2030,6 @@ status_t StagefrightRecorder::setupMPEG4orWEBMRecording() {
     if (mStartTimeOffsetMs > 0) {
         writer->setStartTimeOffsetMs(mStartTimeOffsetMs);
     }
-
-    if (mOzoBrandEnabled)
-        mp4writer->setOzoBranding();
 
     writer->setListener(mListener);
     mWriter = writer;
@@ -2403,8 +2218,6 @@ status_t StagefrightRecorder::stop() {
         mOutputFd = -1;
     }
 
-    this->closeOzoAudioTuneFile();
-
     if (mStarted) {
         mStarted = false;
 
@@ -2477,9 +2290,6 @@ status_t StagefrightRecorder::reset() {
     mStartedRecordingUs = 0;
     mDurationPausedUs = 0;
     mNPauses = 0;
-
-    mOzoFileSourceEnable = false;
-    OzoAudioInitStagefright(*mOzoAudioParams);
 
     mOutputFd = -1;
 
