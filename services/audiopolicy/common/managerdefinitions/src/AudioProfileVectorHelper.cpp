@@ -225,8 +225,8 @@ status_t checkCompatibleChannelMask(const sp<AudioProfile> &audioProfile,
         return NO_ERROR;
     }
     if (channelMask == 0x80000006 ) {
-        ALOGD("ozo return AUDIO_CHANNEL_INDEX_MASK_4");
-        updatedChannelMask = AUDIO_CHANNEL_INDEX_MASK_4;
+        ALOGD("ozo return AUDIO_CHANNEL_INDEX_MASK_3");
+        updatedChannelMask = AUDIO_CHANNEL_INDEX_MASK_3;
         return NO_ERROR;
     }
     const bool isRecordThread = portType == AUDIO_PORT_TYPE_MIX && portRole == AUDIO_PORT_ROLE_SINK;
