@@ -14,18 +14,6 @@
  * limitations under the License.
  */
 
-/*
-Copyright (C) 2020 Nokia Corporation.
-This material, including documentation and any related
-computer programs, is protected by copyright controlled by
-Nokia Corporation. All rights are reserved. Copying,
-including reproducing, storing, adapting or translating, any
-or all of this material requires the prior written consent of
-Nokia Corporation. This material also contains confidential
-information which may not be disclosed to others without the
-prior written consent of Nokia Corporation.
-*/
-
 #ifndef MPEG4_WRITER_H_
 
 #define MPEG4_WRITER_H_
@@ -89,8 +77,6 @@ public:
     virtual void setStartTimeOffsetMs(int ms) { mStartTimeOffsetMs = ms; }
     virtual int32_t getStartTimeOffsetMs() const { return mStartTimeOffsetMs; }
     virtual status_t setNextFd(int fd);
-
-    void setOzoBranding() { mOzoBranding = true; }
 
 protected:
     virtual ~MPEG4Writer();
@@ -241,7 +227,6 @@ protected:
     bool mHasFileLevelMeta;
     uint64_t mFileLevelMetaDataSize;
     bool mHasMoovBox;
-    bool mOzoBranding;                      // Include OZO Audio brand
     uint32_t mPrimaryItemId;
     uint32_t mAssociationEntryCount;
     uint32_t mNumGrids;

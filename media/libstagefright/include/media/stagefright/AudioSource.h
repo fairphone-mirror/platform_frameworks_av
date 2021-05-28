@@ -14,18 +14,6 @@
  * limitations under the License.
  */
 
-/*
-Copyright (C) 2020 Nokia Corporation.
-This material, including documentation and any related
-computer programs, is protected by copyright controlled by
-Nokia Corporation. All rights are reserved. Copying,
-including reproducing, storing, adapting or translating, any
-or all of this material requires the prior written consent of
-Nokia Corporation. This material also contains confidential
-information which may not be disclosed to others without the
-prior written consent of Nokia Corporation.
-*/
-
 #ifndef AUDIO_SOURCE_H_
 
 #define AUDIO_SOURCE_H_
@@ -58,8 +46,7 @@ struct AudioSource : public MediaSource, public MediaBufferObserver {
             pid_t pid = -1,
             audio_port_handle_t selectedDeviceId = AUDIO_PORT_HANDLE_NONE,
             audio_microphone_direction_t selectedMicDirection = MIC_DIRECTION_UNSPECIFIED,
-            float selectedMicFieldDimension = MIC_FIELD_DIMENSION_NORMAL,
-            int64_t channelMask = -1);
+            float selectedMicFieldDimension = MIC_FIELD_DIMENSION_NORMAL);
 
     status_t initCheck() const;
 

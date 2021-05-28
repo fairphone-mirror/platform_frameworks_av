@@ -14,25 +14,12 @@
  * limitations under the License.
  */
 
-/*
-Copyright (C) 2019 Nokia Corporation.
-This material, including documentation and any related
-computer programs, is protected by copyright controlled by
-Nokia Corporation. All rights are reserved. Copying,
-including reproducing, storing, adapting or translating, any
-or all of this material requires the prior written consent of
-Nokia Corporation. This material also contains confidential
-information which may not be disclosed to others without the
-prior written consent of Nokia Corporation.
-*/
-
 //#define LOG_NDEBUG 0
 #define LOG_TAG "codec"
 #include <inttypes.h>
 #include <utils/Log.h>
 
 #include "SimplePlayer.h"
-#include "WaveWriter.h"
 
 #include <binder/IServiceManager.h>
 #include <binder/ProcessState.h>
@@ -54,20 +41,13 @@ prior written consent of Nokia Corporation.
 #include <gui/Surface.h>
 #include <ui/DisplayConfig.h>
 
-static const char *ozoGuidanceTag = "vendor.ozoaudio.guidance.value";
-static const char *ozoOrientationTag = "vendor.ozoaudio.orientation.value";
-
 static void usage(const char *me) {
     fprintf(stderr, "usage: %s [-a] use audio\n"
                     "\t\t[-v] use video\n"
                     "\t\t[-p] playback\n"
                     "\t\t[-S] allocate buffers from a surface\n"
                     "\t\t[-R] render output to surface (enables -S)\n"
-                    "\t\t[-T] use render timestamps (enables -R)\n"
-                    "\t\t[-o] use OZO audio decoder\n"
-                    "\t\t[-O file] write decoded audio to specified file\n"
-                    "\t\t[-g guidance] set OZO guidance mode\n"
-                    "\t\t[-l orientations] set OZO listener orientation, format [frame_ind yaw pitch roll]\n",
+                    "\t\t[-T] use render timestamps (enables -R)\n",
                     me);
     exit(1);
 }
@@ -85,26 +65,6 @@ struct CodecState {
     bool mIsAudio;
 };
 
-static void parseOzoOrientations(KeyedVector<size_t, AString> & events, const char *data) {
-    if (!data) return;
-
-    char *literal = strndup(data, strlen(data));
-    char *value = strtok(literal, ":");
-    while (value != NULL) {
-        if (strlen(value) != 0) {
-            std::string params(value);
-
-            size_t found = params.find_first_of(" ");
-            if (found != std::string::npos) {
-                size_t frame = (size_t)std::stoul(params.substr(0, found));
-                AString event(params.substr(found + 1).c_str());
-                events.add(frame, event);
-            }
-        }
-        value = strtok(NULL, ":");
-    }
-}
-
 }  // namespace android
 
 static int decode(
@@ -114,17 +74,10 @@ static int decode(
         bool useVideo,
         const android::sp<android::Surface> &surface,
         bool renderSurface,
-        bool useTimestamp,
-        const char *output,
-        bool isOzoAudio,
-        const char *ozoGuidance,
-        android::KeyedVector<size_t, android::AString> & ozoEvents,
-        android::KeyedVector<size_t, android::AString> & ozoHeadsetEvents) {
+        bool useTimestamp) {
     using namespace android;
 
     static int64_t kTimeout = 500ll;
-
-    WaveWriter *waveWriter = nullptr;
 
     sp<NuMediaExtractor> extractor = new NuMediaExtractor;
     if (extractor->setDataSource(NULL /* httpService */, path) != OK) {
@@ -142,19 +95,6 @@ static int decode(
         CHECK_EQ(err, (status_t)OK);
 
         AString mime;
-        if (isOzoAudio) {
-            format->setString("mime", MEDIA_MIMETYPE_AUDIO_OZOAUDIO);
-        }
-
-        if (ozoGuidance) {
-            format->setString(ozoGuidanceTag, ozoGuidance);
-        }
-
-        ssize_t eventIndex = ozoEvents.indexOfKey(0);
-        if (eventIndex >= 0) {
-            format->setString(ozoOrientationTag, ozoEvents.valueAt(eventIndex));
-        }
-
         CHECK(format->findString("mime", &mime));
 
         bool isAudio = !strncasecmp(mime.c_str(), "audio/", 6);
@@ -227,15 +167,6 @@ static int decode(
                 sawInputEOS = true;
             } else {
                 CodecState *state = &stateByTrack.editValueFor(trackIndex);
-
-                ssize_t eventIndex = ozoHeadsetEvents.indexOfKey(state->mNumBuffersDecoded);
-                if (eventIndex >= 0) {
-                    sp<AMessage> message = new AMessage();
-                    auto value = ozoHeadsetEvents.valueAt(eventIndex);
-                    ALOGD("Headset event detected: %zu %s", state->mNumBuffersDecoded, value.c_str());
-                    message->setString("vendor.ozoaudio.ls-widening.value", value);
-                    state->mCodec->setParameters(message);
-                }
 
                 size_t index;
                 err = state->mCodec->dequeueInputBuffer(&index, kTimeout);
@@ -332,15 +263,6 @@ static int decode(
                 ALOGV("draining output buffer %zu, time = %lld us",
                       index, (long long)presentationTimeUs);
 
-                if (waveWriter)
-                {
-                    sp<MediaCodecBuffer> outputBuffer;
-                    auto err = state->mCodec->getOutputBuffer(index, &outputBuffer);
-                    CHECK_EQ(err, (status_t) OK);
-
-                    waveWriter->Append(outputBuffer->data(), outputBuffer->size());
-                }
-
                 ++state->mNumBuffersDecoded;
                 state->mNumBytesDecoded += size;
 
@@ -379,23 +301,8 @@ static int decode(
                 CHECK_EQ((status_t)OK, state->mCodec->getOutputFormat(&format));
 
                 ALOGV("INFO_FORMAT_CHANGED: %s", format->debugString().c_str());
-
-                if (!waveWriter && output) {
-                    int32_t channelCount = 2;
-                    int32_t sampleRate = 48000;
-                    CHECK(format->findInt32("channel-count", &channelCount));
-                    CHECK(format->findInt32("sample-rate", &sampleRate));
-                    waveWriter = new WaveWriter(output, channelCount, sampleRate);
-                }
             } else {
                 CHECK_EQ(err, -EAGAIN);
-            }
-
-            ssize_t eventIndex = ozoEvents.indexOfKey(state->mNumBuffersDecoded);
-            if (eventIndex >= 0) {
-                sp<AMessage> message = new AMessage();
-                message->setString(ozoOrientationTag, ozoEvents.valueAt(eventIndex));
-                state->mCodec->setParameters(message);
             }
         }
     }
@@ -423,8 +330,6 @@ static int decode(
         }
     }
 
-    delete waveWriter;
-
     return 0;
 }
 
@@ -439,14 +344,9 @@ int main(int argc, char **argv) {
     bool useSurface = false;
     bool renderSurface = false;
     bool useTimestamp = false;
-    bool isOzoAudio = false;
-    const char* ozoGuidance = "none";
-    const char* ozoOrientations = nullptr;
-    const char* ozoHeadsets = nullptr;
-    const char* output = nullptr;
 
     int res;
-    while ((res = getopt(argc, argv, "havpSDRToH:O:g:l:")) >= 0) {
+    while ((res = getopt(argc, argv, "havpSDRT")) >= 0) {
         switch (res) {
             case 'a':
             {
@@ -461,31 +361,6 @@ int main(int argc, char **argv) {
             case 'p':
             {
                 playback = true;
-                break;
-            }
-            case 'o':
-            {
-                isOzoAudio = true;
-                break;
-            }
-            case 'O':
-            {
-                if(optarg) output = optarg;
-                break;
-            }
-            case 'g':
-            {
-                if(optarg) ozoGuidance = optarg;
-                break;
-            }
-            case 'H':
-            {
-                if(optarg) ozoHeadsets = optarg;
-                break;
-            }
-            case 'l':
-            {
-                if(optarg) ozoOrientations = optarg;
                 break;
             }
             case 'T':
@@ -522,14 +397,6 @@ int main(int argc, char **argv) {
     if (!useAudio && !useVideo) {
         useAudio = useVideo = true;
     }
-
-    // Orientation events for Ozo audio decoding
-    KeyedVector<size_t, AString> ozoEvents;
-    parseOzoOrientations(ozoEvents, ozoOrientations);
-
-    // Headset (on/off) events for Ozo audio decoding
-    KeyedVector<size_t, AString> ozoHeadsetEvents;
-    parseOzoOrientations(ozoHeadsetEvents, ozoHeadsets);
 
     ProcessState::self()->startThreadPool();
 
@@ -587,8 +454,7 @@ int main(int argc, char **argv) {
         player->reset();
     } else {
         decode(looper, argv[0], useAudio, useVideo, surface, renderSurface,
-               useTimestamp, output, isOzoAudio,
-                ozoGuidance, ozoEvents, ozoHeadsetEvents);
+                useTimestamp);
     }
 
     if (playback || (useSurface && useVideo)) {

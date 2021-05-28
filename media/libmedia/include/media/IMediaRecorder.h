@@ -15,18 +15,6 @@
  ** limitations under the License.
  */
 
-/*
-Copyright (C) 2020 Nokia Corporation.
-This material, including documentation and any related
-computer programs, is protected by copyright controlled by
-Nokia Corporation. All rights are reserved. Copying,
-including reproducing, storing, adapting or translating, any
-or all of this material requires the prior written consent of
-Nokia Corporation. This material also contains confidential
-information which may not be disclosed to others without the
-prior written consent of Nokia Corporation.
-*/
-
 #ifndef ANDROID_IMEDIARECORDER_H
 #define ANDROID_IMEDIARECORDER_H
 
@@ -90,9 +78,6 @@ public:
     virtual status_t setPreferredMicrophoneDirection(audio_microphone_direction_t direction) = 0;
     virtual status_t setPreferredMicrophoneFieldDimension(float zoom) = 0;
     virtual status_t getPortId(audio_port_handle_t *portId) = 0;
-
-    virtual status_t setOzoRunTimeParameters(const String8 &params) = 0;
-    virtual status_t setOzoAudioTuneFile(int fd) = 0;
 };
 
 // ----------------------------------------------------------------------------

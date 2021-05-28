@@ -14,18 +14,6 @@
  * limitations under the License.
  */
 
-/*
-Copyright (C) 2020 Nokia Corporation.
-This material, including documentation and any related
-computer programs, is protected by copyright controlled by
-Nokia Corporation. All rights are reserved. Copying,
-including reproducing, storing, adapting or translating, any
-or all of this material requires the prior written consent of
-Nokia Corporation. This material also contains confidential
-information which may not be disclosed to others without the
-prior written consent of Nokia Corporation.
-*/
-
 //#define LOG_NDEBUG 0
 #define LOG_TAG "MPEG4Writer"
 
@@ -78,9 +66,6 @@ prior written consent of Nokia Corporation.
 }))
 
 namespace android {
-
-static const uint16_t OZO_MAJOR_VERSION = 1;
-static const uint16_t OZO_MINOR_VERSION = 1;
 
 static const int64_t kMinStreamableFileSizeInBytes = 5 * 1024 * 1024;
 static const uint8_t kNalUnitTypeSeqParamSet = 0x07;
@@ -579,8 +564,6 @@ void MPEG4Writer::initInternal(int fd, bool isFirstSession) {
         mSwitchPending = false;
         mIsFileSizeLimitExplicitlyRequested = false;
     }
-
-    mOzoBranding = false;
 
     // Verify mFd is seekable
     off64_t off = lseek64(mFd, 0, SEEK_SET);
@@ -1459,12 +1442,6 @@ void MPEG4Writer::writeFtypBox(MetaData *param) {
         writeInt32(0);
         writeFourcc("isom");
         writeFourcc("3gp4");
-    } else if (mOzoBranding) {
-        writeFourcc("nvr1");
-        writeInt32(OZO_MAJOR_VERSION * 65536 + OZO_MINOR_VERSION);
-        writeFourcc("isom");
-        writeFourcc("mp42");
-        writeFourcc("nvr1");
     } else {
         // Only write "heic" as major brand if the client specified HEIF
         // AND we indeed receive some image heic tracks.
@@ -2828,7 +2805,7 @@ status_t MPEG4Writer::Track::start(MetaData *params) {
         // even if the file is well-formed and the primary picture is correct.
 
         // Reserve item ids for samples + grid
-        size_t numItemsToReserve = mNumTiles + (mNumTiles > 1);
+        size_t numItemsToReserve = mNumTiles + (mNumTiles > 0);
         status_t err = mOwner->reserveItemId_l(numItemsToReserve, &mItemIdBase);
         if (err != OK) {
             return err;

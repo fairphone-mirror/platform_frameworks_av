@@ -19,7 +19,7 @@
 #include <string>
 
 #define LOG_TAG "APM::AudioProfileVectorHelper"
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 
 #include <media/AudioContainers.h>
 #include <media/AudioResamplerPublic.h>
@@ -218,14 +218,9 @@ status_t checkCompatibleChannelMask(const sp<AudioProfile> &audioProfile,
                                     audio_port_type_t portType,
                                     audio_port_role_t portRole)
 {
-ALOGD("checkCompatibleChannelMask  channelMask(0x%x)",channelMask);
     const ChannelMaskSet channelMasks = audioProfile->getChannels();
     if (channelMasks.empty()) {
         updatedChannelMask = channelMask;
-        return NO_ERROR;
-    }
-if (channelMask == 0x80000006 ) {
-        updatedChannelMask = AUDIO_CHANNEL_INDEX_MASK_3;
         return NO_ERROR;
     }
     const bool isRecordThread = portType == AUDIO_PORT_TYPE_MIX && portRole == AUDIO_PORT_ROLE_SINK;
