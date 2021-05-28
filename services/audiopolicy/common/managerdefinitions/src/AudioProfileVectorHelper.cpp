@@ -218,14 +218,13 @@ status_t checkCompatibleChannelMask(const sp<AudioProfile> &audioProfile,
                                     audio_port_type_t portType,
                                     audio_port_role_t portRole)
 {
-    ALOGD("ozo checkCompatibleChannelMask  channelMask(0x%x)",channelMask);
+ALOGD("checkCompatibleChannelMask  channelMask(0x%x)",channelMask);
     const ChannelMaskSet channelMasks = audioProfile->getChannels();
     if (channelMasks.empty()) {
         updatedChannelMask = channelMask;
         return NO_ERROR;
     }
-    if (channelMask == 0x80000006 ) {
-        ALOGD("ozo return AUDIO_CHANNEL_INDEX_MASK_3");
+if (channelMask == 0x80000006 ) {
         updatedChannelMask = AUDIO_CHANNEL_INDEX_MASK_3;
         return NO_ERROR;
     }

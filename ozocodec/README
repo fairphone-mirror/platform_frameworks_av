@@ -1,0 +1,5 @@
+# Test scripts for for ozoaudio
+
+This directory contains test application for encoding ozoaudio. Decoding of ozoaudio can be done with android codec-application. Bash scripts are used test encoding and decoding of ozoaudio.
+
+Test samples are available in articatory, please download them first and extract package to ozocodec directory.

@@ -76,6 +76,7 @@ prior written consent of Nokia Corporation.
 
 #include "ARTPWriter.h"
 
+#include "OzoAudioFileSource.h"
 #include "ozoCodecEventListener.h"
 #include "OzoStagefright.h"
 
@@ -1202,6 +1203,7 @@ status_t StagefrightRecorder::start() {
 }
 
 sp<MediaCodecSource> StagefrightRecorder::createAudioSource() {
+    bool use_ozo_capture = false;
     int32_t sourceSampleRate = mSampleRate;
 
     if (mCaptureFpsEnable && mCaptureFps >= mFrameRate) {
@@ -1357,6 +1359,30 @@ sp<MediaCodecSource> StagefrightRecorder::createAudioSource() {
                 kKeyMaxInputSize, &maxInputSize));
 
     format->setInt32("max-input-size", maxInputSize);
+
+    int32_t channels = mAudioChannels;
+    int32_t samplerate = mSampleRate;
+
+    mOzoBrandEnabled = false;
+    if (use_ozo_capture) {
+        bool monoOutput = (mAudioChannels == 1);
+        if (monoOutput && mOzoAudioParams->encoding_mode == "ozoaudio") {
+            mOzoAudioParams->encoding_mode = "ls";
+        }
+        else if (mOzoAudioParams->encoding_mode == "ozoaudio")
+            mOzoBrandEnabled = use_ozo_capture;
+
+        mAudioBitRate = (monoOutput) ? std::max(mAudioBitRate, 128000) : std::max(mAudioBitRate, 256000);
+
+        sp<MetaData> micFormat = audioSource->getFormat();
+        channels = OzoAudioInitMessageStagefright(*mOzoAudioParams, mOzoTuneWriter ? true : false,
+            format, micFormat, samplerate);
+
+        // Codec event listener needed
+        if (OzoAudioNeedListenerStagefright(*mOzoAudioParams))
+            mCodecEventListener = new OzoCodecEventListener(mListener);
+    }
+
     format->setInt32("channel-count", mAudioChannels);
     format->setInt32("sample-rate", mSampleRate);
     format->setInt32("bitrate", mAudioBitRate);

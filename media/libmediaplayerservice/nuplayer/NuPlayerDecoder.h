@@ -14,6 +14,18 @@
  * limitations under the License.
  */
 
+/*
+Copyright (C) 2020 Nokia Corporation.
+This material, including documentation and any related
+computer programs, is protected by copyright controlled by
+Nokia Corporation. All rights are reserved. Copying,
+including reproducing, storing, adapting or translating, any
+or all of this material requires the prior written consent of
+Nokia Corporation. This material also contains confidential
+information which may not be disclosed to others without the
+prior written consent of Nokia Corporation.
+*/
+
 #ifndef NUPLAYER_DECODER_H_
 #define NUPLAYER_DECODER_H_
 
@@ -24,6 +36,7 @@
 namespace android {
 
 class MediaCodecBuffer;
+class OzoPlaybackController;
 
 struct NuPlayer::Decoder : public DecoderBase {
     Decoder(const sp<AMessage> &notify,
@@ -113,7 +126,7 @@ protected:
     AString mComponentName;
 
     float mVideoRenderFps;
-
+    sp<OzoPlaybackController> mOzoPlayCtrl;
     void handleError(int32_t err);
     bool handleAnInputBuffer(size_t index);
     bool handleAnOutputBuffer(
