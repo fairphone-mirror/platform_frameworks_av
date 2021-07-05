@@ -119,9 +119,9 @@
                 <Limit name="bitrate" range="1-48000000" />
             </Variant>
             <Variant name="slow-cpu">
-                <Limit name="size" min="2x2" max="2048x2048" />
+                <Limit name="size" min="2x2" max="1280x1280" />
                 <!-- profiles and levels:  ProfileHigh : Level51 -->
-                <Limit name="block-count" range="1-16384" />
+                <Limit name="block-count" range="1-3600" /> <!-- max 1280x720 -->
                 <Limit name="blocks-per-second" range="1-491520" />
                 <Limit name="bitrate" range="1-40000000" />
             </Variant>
