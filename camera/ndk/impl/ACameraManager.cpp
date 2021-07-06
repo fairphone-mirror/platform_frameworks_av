@@ -756,6 +756,14 @@ ACameraManager::getCameraIdList(ACameraIdList** cameraIdList) {
 
     int numCameras = idList.size();
     ACameraIdList *out = new ACameraIdList;
+
+    /* FP4: Expose only two cameras. The third camera (wideangle) is an
+     * auxiliary camera and must not be exposed via ACameraManager. */
+    if (numCameras > 2) {
+        numCameras = 2;
+        ALOGE("Expose two cameras numCameras %d", numCameras);
+    }
+
     if (!out) {
         ALOGE("Allocate memory for ACameraIdList failed!");
         return ACAMERA_ERROR_NOT_ENOUGH_MEMORY;
