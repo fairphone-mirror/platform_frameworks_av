@@ -66,6 +66,7 @@ cc_library_shared {
         "-Wall",
         "-Wextra",
         "-Werror",
+        "-D__FP_CAMERA__",
     ],
     // TODO: jchowdhary@, use header_libs instead b/131165718
     include_dirs: [

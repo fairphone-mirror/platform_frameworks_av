@@ -637,6 +637,15 @@ ACameraManager::getCameraIdList(ACameraIdList** cameraIdList) {
 
     int numCameras = idList.size();
     ACameraIdList *out = new ACameraIdList;
+#ifdef __FP_CAMERA__
+//Expose two cameras fot CTS test
+if(numCameras > 2)
+{
+    numCameras = 2;
+    ALOGE("Expose two cameras numCameras %d",numCameras);
+}
+#endif
+
     if (!out) {
         ALOGE("Allocate memory for ACameraIdList failed!");
         return ACAMERA_ERROR_NOT_ENOUGH_MEMORY;
