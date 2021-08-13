@@ -5953,7 +5953,9 @@ media_status_t MPEG4Source::read(
                 //if nallength abnormal,ignore it.
                 ALOGW("abnormal nallength, ignore this NAL");
                 srcOffset = size;
-                break;
+
+                ALOGE("FP2: Discarding file with malformed NAL!");
+                return AMEDIA_ERROR_MALFORMED;
             }
 
             if (nalLength == 0) {
