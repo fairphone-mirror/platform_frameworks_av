@@ -280,6 +280,7 @@ status_t Camera3OutputStream::returnBufferCheckedLocked(
             return res;
         }
 
+        ALOGE("timestamp %" PRIu64 ",anwBuffer %p, buffer %p",timestamp, anwBuffer, buffer.buffer);
         res = queueBufferToConsumer(currentConsumer, anwBuffer, anwReleaseFence, surface_ids);
         if (shouldLogError(res, state)) {
             ALOGE("%s: Stream %d: Error queueing buffer to native window:"
