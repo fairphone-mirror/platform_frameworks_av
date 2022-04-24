@@ -2145,6 +2145,15 @@ status_t getAudioOffloadInfo(const sp<MetaData>& meta, bool hasVideo,
     if (meta == NULL) {
         return BAD_VALUE;
     }
+
+    char value[PROPERTY_VALUE_MAX];
+    property_get("vendor.audio.mmi.id", value, "0");
+    ALOGV("vendor.audio.mmi.id = %d",atoi(value));
+    if (atoi(value) == 100)  {
+        ALOGE("vendor.audio.mmi.id==100, not used compress offload");
+        return BAD_VALUE;
+    }
+
     CHECK(meta->findCString(kKeyMIMEType, &mime));
 
     (*info) = AUDIO_INFO_INITIALIZER;
