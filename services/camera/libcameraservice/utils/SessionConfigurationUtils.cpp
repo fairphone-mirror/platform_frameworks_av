@@ -16,6 +16,10 @@
 
 #include <cutils/properties.h>
 
+#ifdef __FP_CAMERA__
+#include <camera/VendorTagDescriptor.h>
+#endif
+
 #include "SessionConfigurationUtils.h"
 #include "../api2/DepthCompositeStream.h"
 #include "../api2/HeicCompositeStream.h"
@@ -180,6 +184,73 @@ bool roundBufferDimensionNearest(int32_t width, int32_t height,
     int32_t bestWidth = -1;
     int32_t bestHeight = -1;
 
+#ifdef __FP_CAMERA__
+    char value[PROPERTY_VALUE_MAX];
+    property_get("vendor.debug.camera.pkgname", value, "");
+
+    if (!strncmp(value,"com.fp.camera", strlen(value))) {
+        sp<VendorTagDescriptor> vTags =
+            VendorTagDescriptor::getGlobalVendorTagDescriptor();
+        if ((nullptr == vTags.get()) || (0 >= vTags->getTagCount())) {
+            sp<VendorTagDescriptorCache> cache =
+                VendorTagDescriptorCache::getGlobalVendorTagCache();
+            if (cache.get()) {
+                const camera_metadata_t *metaBuffer = info.getAndLock();
+                metadata_vendor_id_t vendorId = get_camera_metadata_vendor_id(metaBuffer);
+                info.unlock(metaBuffer);
+                cache->getVendorTagDescriptor(vendorId, &vTags);
+            }
+        }
+        char tagName[]="fp.scaler.availableStreamConfigurations";
+        uint32_t tag;
+        status_t res = info.getTagFromName(tagName, vTags.get(), &tag);
+
+        if (res == OK) {
+            camera_metadata_ro_entry FP_StreamConfigs = info.find(tag);
+            for (size_t i = 0; i < FP_StreamConfigs.count; i += 4) {
+                int32_t fmt = FP_StreamConfigs.data.i32[i];
+                int32_t w = FP_StreamConfigs.data.i32[i + 1];
+                int32_t h = FP_StreamConfigs.data.i32[i + 2];
+
+                // Ignore input/output type for now
+                if (fmt == format) {
+                    if (w == width && h == height) {
+                        bestWidth = width;
+                        bestHeight = height;
+                        break;
+                    }
+                } else if (w <= ROUNDING_WIDTH_CAP && (bestWidth == -1 ||
+                        SessionConfigurationUtils::euclidDistSquare(w, h, width, height) <
+                        SessionConfigurationUtils::euclidDistSquare(bestWidth, bestHeight, width, height))) {
+                    bestWidth = w;
+                    bestHeight = h;
+                }
+            }
+        }
+    } else {
+        // Iterate through listed stream configurations and find the one with the smallest euclidean
+        // distance from the given dimensions for the given format.
+        for (size_t i = 0; i < streamConfigs.count; i += 4) {
+            int32_t fmt = streamConfigs.data.i32[i];
+            int32_t w = streamConfigs.data.i32[i + 1];
+            int32_t h = streamConfigs.data.i32[i + 2];
+
+            // Ignore input/output type for now
+            if (fmt == format) {
+                if (w == width && h == height) {
+                    bestWidth = width;
+                    bestHeight = height;
+                    break;
+                } else if (w <= ROUNDING_WIDTH_CAP && (bestWidth == -1 ||
+                        SessionConfigurationUtils::euclidDistSquare(w, h, width, height) <
+                        SessionConfigurationUtils::euclidDistSquare(bestWidth, bestHeight, width, height))) {
+                    bestWidth = w;
+                    bestHeight = h;
+                }
+            }
+        }
+    }
+#else
     // Iterate through listed stream configurations and find the one with the smallest euclidean
     // distance from the given dimensions for the given format.
     for (size_t i = 0; i < streamConfigs.count; i += 4) {
@@ -202,6 +273,7 @@ bool roundBufferDimensionNearest(int32_t width, int32_t height,
             }
         }
     }
+#endif
 
     if (isPriviledgedClient == true && bestWidth == -1 &&
         (format == HAL_PIXEL_FORMAT_RAW10 || format == HAL_PIXEL_FORMAT_RAW12 ||
