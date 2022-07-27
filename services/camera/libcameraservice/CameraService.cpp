@@ -3367,14 +3367,6 @@ binder::Status CameraService::BasicClient::disconnect() {
     // client shouldn't be able to call into us anymore
     mClientPid = 0;
 
-#ifdef __FP_CAMERA__
-    if(m_isNeedFlushPkgName)
-    {
-        property_set(PROPERTY_CAMERA_PACKAGENAME, "");
-        m_isNeedFlushPkgName = false;
-        ALOGV("%s Flush camera pkgname",__FUNCTION__);
-    }
-#endif
 
     return res;
 }
