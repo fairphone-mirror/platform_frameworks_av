@@ -87,6 +87,39 @@ cc_library_shared {
     },
 }
 
+cc_library_shared {
+    name: "libstagefright_bufferqueue_helper_ext",
+    defaults: ["libstagefright_bufferqueue-defaults"],
+    vendor: true,
+    vndk: {
+        enabled: true,
+        extends: "libstagefright_bufferqueue_helper",
+    },
+    min_sdk_version: "29",
+
+    shared_libs: [ "libgui" ],
+    target: {
+        vendor: {
+            exclude_shared_libs: [
+                "libgui",
+            ],
+            static_libs: [
+                "libgui_bufferqueue_static",
+            ],
+            shared_libs: [
+                "android.hidl.token@1.0-utils",
+                "libEGL",
+                "libnativewindow",
+                "libvndksupport",
+            ],
+            cflags: [
+                "-DNO_BINDER",
+                "-D__ANDROID_VNDK_EXT__",
+            ],
+        },
+    },
+}
+
 // This lib is needed on devices that doesn't use vndk,
 // on these devices we still don't want libgui to be pulled
 // in onto the apex build. It should only be used by
