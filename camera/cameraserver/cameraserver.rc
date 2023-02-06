@@ -1,3 +1,6 @@
+on boot
+    setprop persist.vendor.camera.tctrom 1
+
 service cameraserver /system/bin/cameraserver
     class main
     user cameraserver
