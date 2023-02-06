@@ -2035,6 +2035,37 @@ Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const String8&
         LOG_ALWAYS_FATAL_IF(client.get() == nullptr, "%s: CameraService in invalid state",
                 __FUNCTION__);
 
+        /*Begin zihao.li for [Task][FP5-162] FP5 sync tct framework code on 20230206*/
+        {
+            char value[PROPERTY_VALUE_MAX];
+            property_get("persist.vendor.camera.blacklist", value, "android.camera.cts,com.android.cts.verifier,com.google.android.apps.messaging,com.whatsapp");
+            String16 packagelist(value);
+
+            if ((0 != String8(clientPackageName).length()) && packagelist.contains(clientPackageName)) {
+                property_set("debug.camera.blacklist", "1");
+            } else {
+                property_set("debug.camera.blacklist", "0");
+            }
+        }
+
+        {
+            //send package name to hal
+            property_set("debug.camera.packagename", String8(clientPackageName).string());
+        }
+
+        {
+            char value[PROPERTY_VALUE_MAX];
+            property_get("persist.vendor.camera.whitelist", value, "com.tcl.camera,org.codeaurora.snapcam");
+            String16 packagelist(value);
+
+            if ((0 != String8(clientPackageName).length()) && packagelist.contains(clientPackageName)) {
+                property_set("debug.camera.whitelist", "1");
+            } else {
+                property_set("debug.camera.whitelist", "0");
+            }
+        }
+        /*End   zihao.li for [Task][FP5-162] FP5 sync tct framework code on 20230206*/
+
         String8 monitorTags = isClientWatched(client.get()) ? mMonitorTags : String8("");
         err = client->initialize(mCameraProviderManager, monitorTags);
         if (err != OK) {
