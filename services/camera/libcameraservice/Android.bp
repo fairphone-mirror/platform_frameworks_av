@@ -196,6 +196,7 @@ cc_library_shared {
         "-Wextra",
         "-Werror",
         "-Wno-ignored-qualifiers",
+        "-D__FP_CAMERA__",
     ],
 
 }
