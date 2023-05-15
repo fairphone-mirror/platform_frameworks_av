@@ -109,10 +109,25 @@ CameraDeviceClient::CameraDeviceClient(const sp<CameraService>& cameraService,
     mPrivilegedClient(false),
     mOverrideForPerfClass(overrideForPerfClass) {
 
-    char value[PROPERTY_VALUE_MAX];
-    property_get("persist.vendor.camera.privapp.list", value, "");
-    String16 packagelist(value);
-    if (packagelist.contains(clientPackageName.string())) {
+    //should be same with Camera.java/CameraDeviceImpl.java/CameraManager.java/CameraDeviceClient.cpp
+    const String16 TctCameraPrivilegedAppList[] = {
+        String16("org.codeaurora.snapcam"),
+        String16("com.fp5.camera"),
+        String16("com.fp5.mtf"),
+        String16("com.fp5.verifytool"),
+        String16("com.android.mmi"),
+        String16("foundation.e.camera")
+    };
+
+    bool found = false;
+    for (const auto& s : TctCameraPrivilegedAppList) {
+        if (s == clientPackageName.string()) {
+            found = true;
+            break;
+        }
+    }
+
+    if (found) {
         mPrivilegedClient = true;
     }
 
