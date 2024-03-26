@@ -1903,6 +1903,9 @@ String16 CameraService::getPackageNameFromUid(int clientUid) {
 
     return packageName;
 }
+//begin [TCT-ROM][Camera] Begin by hongzhang/jialiwei for jira FP5U-430 camera solutions
+String8 CameraService::gClientPackageName = String8();
+//end  [TCT-ROM][Camera] Begin by hongzhang/jialiwei for jira FP5U-430 camera solutions
 
 template<class CALLBACK, class CLIENT>
 Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const String8& cameraId,
@@ -2050,6 +2053,8 @@ Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const String8&
 
         {
             //send package name to hal
+            gClientPackageName = String8(clientPackageName);
+
             property_set("debug.camera.packagename", String8(clientPackageName).string());
         }
 

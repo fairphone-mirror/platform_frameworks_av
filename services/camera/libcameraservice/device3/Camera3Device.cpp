@@ -265,7 +265,7 @@ status_t Camera3Device::initializeCommonLocked() {
             return res;
         }
     }
-
+    
     mZoomRatioMappers[mId.c_str()] = ZoomRatioMapper(&mDeviceInfo,
             mSupportNativeZoomRatio, usePrecorrectArray);
 
@@ -3805,6 +3805,66 @@ status_t Camera3Device::RequestThread::prepareHalRequests() {
                 // request in a batch as new
                 !(batchedRequest && i > 0);
         if (newRequest) {
+            //[TCT-ROM][Camera] Begin by hongzhang for task 11051757 camera solutions
+            {
+                // String16 curClient = TCTCameraHelper::GetLastConnectClient();
+                String8 curClient = CameraService::gClientPackageName;
+                List<PhysicalCameraSettings>::iterator it;
+                for (it = captureRequest->mSettingsList.begin();
+                        it != captureRequest->mSettingsList.end(); it++) {
+                    sp<Camera3Device> parent = mParent.promote();
+                    // TCTCameraHelper::OverridePrepareHALRequest(parent->mDeviceInfo, &(it->metadata), it->cameraId.c_str(), curClient);
+                    auto IsTctCameraPrivileged3rdApp = [&](String8 &pkgName) {
+                        static const char* TctCameraPrivileged3rdAppList[] = {
+                            "com.google.android.apps.messaging",
+                            "com.twitter.android",
+                            "com.tencent.mm",
+                            "com.tencent.mobileqq",
+                            "com.skype.raider",
+                            "com.android.dialer",
+                            "com.snapchat.android",
+                            "com.whatsapp",
+                            "com.facebook.katana",
+                            "com.instagram.android"
+                        };
+
+                        if(pkgName.size() == 0) {
+                            return false;
+                        }
+                        bool result = false;
+                        for(size_t i = 0; i < (sizeof(TctCameraPrivileged3rdAppList)/sizeof(*TctCameraPrivileged3rdAppList)); i++) {
+                            String8 tmp(TctCameraPrivileged3rdAppList[i]);
+                            if(pkgName.contains(tmp)) {
+                                result = true;
+                                break;
+                            }
+                        }
+                        return result;
+                    };
+                    if(IsTctCameraPrivileged3rdApp(curClient)) {
+                        // UpdateFDConfig(deviceInfo, request);
+                        // UpdateAFRegion(deviceInfo, request);
+                        camera_metadata_entry_t availableFaceDetectModes = parent->mDeviceInfo.find(ANDROID_STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES);
+                        camera_metadata_entry_t faceDetectMode = it->metadata.find(ANDROID_STATISTICS_FACE_DETECT_MODE);
+
+                        bool simpleFDSupported = false;
+                        for (size_t i = 0 ; i < availableFaceDetectModes.count; i++) {
+                            if(availableFaceDetectModes.data.u8[i] == ANDROID_STATISTICS_FACE_DETECT_MODE_SIMPLE) {
+                                simpleFDSupported = true;
+                                break;
+                            }
+                        }
+
+                        if(simpleFDSupported && faceDetectMode.count > 0
+                            && faceDetectMode.data.u8[0] == ANDROID_STATISTICS_FACE_DETECT_MODE_OFF) {
+                            ALOGI("%d %s: Update fd mode to simple",__LINE__, __FUNCTION__);
+                            uint8_t fdMode = ANDROID_STATISTICS_FACE_DETECT_MODE_SIMPLE;
+                            it->metadata.update(ANDROID_STATISTICS_FACE_DETECT_MODE, &fdMode, 1);
+                        }
+                    }
+                }
+            }
+            //[TCT-ROM][Camera] End by hongzhang for task 11051757 camera solutions
             std::set<std::string> cameraIdsWithZoom;
             /**
              * HAL workaround:
