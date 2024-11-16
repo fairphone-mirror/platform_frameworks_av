@@ -431,6 +431,14 @@ void CameraManagerGlobal::getCameraIdList(const DeviceContext& context,
         if (!statusAndHAL3Support.supportsHAL3) {
             continue;
         }
+
+        /*Begin zihao.li for [Task][FP5-162] FP5 sync tct framework code on 20230206*/
+        bool exposed = property_get_bool("persist.vendor.camera.aux.exposed", false);
+        if(atoi(key.cameraId.c_str()) >= 3 && !exposed){
+            continue;
+        }
+        /*End   zihao.li for [Task][FP5-162] FP5 sync tct framework code on 20230206*/
+
         cameraIds->push_back(key.cameraId);
     }
 }

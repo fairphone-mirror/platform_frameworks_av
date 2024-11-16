@@ -2409,6 +2409,9 @@ std::string CameraService::getPackageNameFromUid(int clientUid) {
 
     return packageName;
 }
+//begin [TCT-ROM][Camera] Begin by hongzhang/jialiwei for jira FP5U-430 camera solutions
+std::string CameraService::gClientPackageName;
+//end  [TCT-ROM][Camera] Begin by hongzhang/jialiwei for jira FP5U-430 camera solutions
 
 template<class CALLBACK, class CLIENT>
 Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const std::string& cameraId,
@@ -2540,6 +2543,48 @@ Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const std::str
         LOG_ALWAYS_FATAL_IF(client.get() == nullptr, "%s: CameraService in invalid state",
                 __FUNCTION__);
 
+        /*Begin zihao.li for [Task][FP5-162] FP5 sync tct framework code on 20230206*/
+        {
+            //char value[PROPERTY_VALUE_MAX];
+            //property_get("persist.vendor.camera.blacklist", value, "android.camera.cts,com.android.cts.verifier,com.google.android.apps.messaging,com.whatsapp");
+            //String16 packagelist(value);
+            std::unordered_set<std::string> packagelist = {
+                "android.camera.cts",
+                "com.android.cts.verifier",
+                "com.google.android.apps.messaging",
+                "com.whatsapp",
+            };
+
+            if ((0 != clientPackageName.size()) && (packagelist.find(clientPackageName) != packagelist.end())) {
+                property_set("debug.camera.blacklist", "1");
+            } else {
+                property_set("debug.camera.blacklist", "0");
+            }
+        }
+
+        {
+            //send package name to hal
+            gClientPackageName = clientPackageName;
+
+            property_set("debug.camera.packagename", clientPackageName.c_str());
+        }
+
+        {
+            //char value[PROPERTY_VALUE_MAX];
+            //property_get("persist.vendor.camera.whitelist", value, "com.tcl.camera,org.codeaurora.snapcam");
+            //String16 packagelist(value);
+            std::unordered_set<std::string> packagelist = {
+                "com.tcl.camera",
+                "org.codeaurora.snapcam",
+            };
+
+            if ((0 != clientPackageName.size()) && (packagelist.find(clientPackageName) != packagelist.end())) {
+                property_set("debug.camera.whitelist", "1");
+            } else {
+                property_set("debug.camera.whitelist", "0");
+            }
+        }
+        /*End   zihao.li for [Task][FP5-162] FP5 sync tct framework code on 20230206*/
         std::string monitorTags = isClientWatched(client.get()) ? mMonitorTags : std::string();
         err = client->initialize(mCameraProviderManager, monitorTags);
         if (err != OK) {
