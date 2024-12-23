@@ -21,7 +21,10 @@ namespace flags {
 
 bool virtual_camera_service_build_flag() {
 #if VIRTUAL_CAMERA_SERVICE_ENABLED
-  return true;
+  //[TCT-ROM][Camera] Begin by hongzhang for defect BERTMO-6316 workaround
+  // return true;
+  return false;
+  //[TCT-ROM][Camera] End by hongzhang for defect BERTMO-6316 workaround
 #else
   return false;
 #endif
