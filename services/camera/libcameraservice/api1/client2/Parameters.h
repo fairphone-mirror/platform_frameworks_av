@@ -186,6 +186,10 @@ struct Parameters {
     // Whether slowJpegMode is forced regardless of jpeg stream FPS
     bool isSlowJpegModeForced;
 
+    /* Begin ancheng.wang for FP5 sync tct framework code on 20241226 */
+    String16 clientPackageName = String16();
+    /* End ancheng.wang for FP5 sync tct framework code on 20241226 */
+
     // Overall camera state
     enum State {
         DISCONNECTED,

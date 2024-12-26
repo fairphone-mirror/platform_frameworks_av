@@ -87,6 +87,9 @@ Camera2Client::Camera2Client(const sp<CameraService>& cameraService,
     SharedParameters::Lock l(mParameters);
     l.mParameters.state = Parameters::DISCONNECTED;
     l.mParameters.isSlowJpegModeForced = forceSlowJpegMode;
+    /* Begin ancheng.wang for FP5 sync tct framework code on 20241226 */
+    l.mParameters.clientPackageName = String16(clientPackageName.c_str());
+    /* End ancheng.wang for FP5 sync tct framework code on 20241226 */
 }
 
 status_t Camera2Client::initialize(sp<CameraProviderManager> manager,

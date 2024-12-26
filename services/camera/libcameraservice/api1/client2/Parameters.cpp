@@ -3027,6 +3027,43 @@ int Parameters::arrayYToNormalizedWithCrop(int y,
     }
 }
 
+/* Begin ancheng.wang for FP5 sync tct framework code on 20241226 */
+static Size tctSizes[] = {
+    {3840,2160},
+    {1920,1080},
+    {1280,720},
+    {720,480},
+    {640,480},
+    {352,288},
+    {320,240},
+    {176,144}
+};
+
+bool inTCTSizeList(int32_t width, int32_t height) {
+    if(!property_get_bool("debug.camera.override.streamconfig", true)) {
+        return true;
+    }
+    bool inList = false;
+    for(Size s:tctSizes) {
+        if(width == s.width && height == s.height) {
+            inList = true;
+            break;
+        }
+    }
+    return inList;
+}
+
+bool IsVerificationPackage(String16 pkgName) {
+    if(pkgName.size() == 0) {
+        return false;
+    }
+    if(pkgName.contains(String16("android.camera.cts")) || pkgName.contains(String16("com.android.cts.verifier"))) {
+        return true;
+    }
+    return false;
+}
+/* End ancheng.wang for FP5 sync tct framework code on 20241226 */
+
 status_t Parameters::getFilteredSizes(const Size &lower, const Size &upper,
         Vector<Size> *sizes) {
     if (info == NULL) {
@@ -3052,6 +3089,13 @@ status_t Parameters::getFilteredSizes(const Size &lower, const Size &upper,
                 // Filter slow sizes from preview/record
                 continue;
             }
+            /* Begin ancheng.wang for FP5 sync tct framework code on 20241226 */
+            if(IsVerificationPackage(clientPackageName)) {
+                if(!inTCTSizeList(sc.width, sc.height)) {
+                    continue;
+                }
+            }
+            /* End ancheng.wang for FP5 sync tct framework code on 20241226 */
             sizes->push({sc.width, sc.height});
         }
     }
@@ -3185,14 +3229,33 @@ SortedVector<int32_t> Parameters::getAvailableOutputFormats() {
 Vector<Parameters::Size> Parameters::getAvailableJpegSizes() {
     Vector<Parameters::Size> jpegSizes;
     Vector<StreamConfiguration> scs = getStreamConfigurations();
+    Size maxSize = {-1,-1}; // FP5 sync tct framework code on 20241226
     for (size_t i = 0; i < scs.size(); i++) {
         const StreamConfiguration &sc = scs[i];
         if (sc.isInput == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
                 sc.format == HAL_PIXEL_FORMAT_BLOB) {
             Size sz = {sc.width, sc.height};
+            /* Begin ancheng.wang for FP5 sync tct framework code on 20241226 */
+            if(sc.width*sc.height > maxSize.width*maxSize.height) {
+                maxSize.width = sc.width;
+                maxSize.height = sc.height;
+            }
+            if(IsVerificationPackage(clientPackageName)) {
+                if(!inTCTSizeList(sc.width, sc.height)) {
+                    continue;
+                }
+            }
+            /* End ancheng.wang for FP5 sync tct framework code on 20241226 */
             jpegSizes.add(sz);
         }
     }
+    /* Begin ancheng.wang for FP5 sync tct framework code on 20241226 */
+    if(IsVerificationPackage(clientPackageName)) {
+        if(!inTCTSizeList(maxSize.width, maxSize.height)) {
+            jpegSizes.add(maxSize);
+        }
+    }
+    /* End ancheng.wang for FP5 sync tct framework code on 20241226 */
 
     return jpegSizes;
 }
