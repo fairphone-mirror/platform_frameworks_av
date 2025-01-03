@@ -3813,6 +3813,152 @@ status_t Camera3Device::removeFwkOnlyRegionKeys(CameraMetadata *request) {
     return OK;
 }
 
+/**
+ * @brief Touch ROI of some 3rd app(such as wechat) is too small to focus. Defect 8679404/10983136.
+ * AF tuning owner requests override touch af region to at least 400*400.
+ *
+ * @param deviceInfo
+ * @param request
+ */
+void UpdateAFRegion(const char* pkgName, const CameraMetadata &deviceInfo, CameraMetadata *request) {
+    camera_metadata_entry_t entry;
+    int arrayHeight = 0;
+    int arrayWidth = 0;
+
+    camera_metadata_ro_entry_t ro;
+    ro = deviceInfo.find(ANDROID_SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+    if(ro.count == 0)
+    {
+        ALOGI("can not find ANDROID_SENSOR_INFO_ACTIVE_ARRAY_SIZE");
+        return;
+    }
+
+    arrayWidth = ro.data.i32[2];
+    arrayHeight = ro.data.i32[3];
+
+    entry = request->find(ANDROID_SCALER_CROP_REGION);
+    if(entry.count == 0)
+    {
+        ALOGI("can not find ANDROID_SCALER_CROP_REGION");
+        return;
+    }
+
+    int32_t cropRegionLeft = entry.data.i32[0] ;
+    int32_t cropRegionTop = entry.data.i32[1];
+    int32_t cropRegionWidth = entry.data.i32[2];
+    int32_t cropRegionHeight = entry.data.i32[3];
+
+    entry = request->find(ANDROID_CONTROL_AF_REGIONS);
+    if(entry.count == 0)
+    {
+        ALOGI("can not find ANDROID_CONTROL_AF_REGIONS");
+        return;
+    }
+
+    ALOGI("%d %s:crop region %d %d, %dx%d. af region (%d %d %d %d)",__LINE__, __FUNCTION__,
+                    cropRegionLeft, cropRegionTop, cropRegionWidth, cropRegionHeight,
+                    entry.data.i32[0], entry.data.i32[1],
+                    entry.data.i32[2], entry.data.i32[3]);
+
+    int32_t width = entry.data.i32[2] - entry.data.i32[0];
+    int32_t height = entry.data.i32[3] - entry.data.i32[1];
+
+    int32_t minSize = 400;
+    bool af_region_changed = false;
+
+    /* add by haojiefang fix messaging app request af region error 20210802, defect 11394288 begin */
+#if 0
+    if(strcmp("com.google.android.apps.messaging", pkgName) == 0) {
+
+        camera_metadata_entry_t af_mode = request->find(ANDROID_CONTROL_AF_MODE);
+
+        if(af_mode.count > 0)
+        {   //only update in ANDROID_CONTROL_AF_MODE_AUTO
+            if(af_mode.data.u8[0] == ANDROID_CONTROL_AF_MODE_AUTO && !(minSize == width || minSize == height))
+            {
+                std::swap(entry.data.i32[0], entry.data.i32[1]);
+                std::swap(entry.data.i32[2], entry.data.i32[3]);
+
+                entry.data.i32[0] = entry.data.i32[0] * cropRegionWidth * 1.0 / cropRegionHeight;
+                entry.data.i32[2] = entry.data.i32[2] * cropRegionWidth * 1.0 / cropRegionHeight;
+                entry.data.i32[1] = entry.data.i32[1] * cropRegionHeight * 1.0 / cropRegionWidth;
+                entry.data.i32[3] = entry.data.i32[3] * cropRegionHeight * 1.0 / cropRegionWidth;
+
+                entry.data.i32[0] = entry.data.i32[0] > cropRegionWidth ? cropRegionWidth - 1 : entry.data.i32[0];
+                entry.data.i32[2] = entry.data.i32[2] > cropRegionWidth ? cropRegionWidth - 1 : entry.data.i32[2];
+                entry.data.i32[1] = entry.data.i32[1] > cropRegionHeight ? cropRegionHeight - 1 : entry.data.i32[1];
+                entry.data.i32[3] = entry.data.i32[3] > cropRegionHeight ? cropRegionHeight - 1 : entry.data.i32[3];
+
+                af_region_changed = true;
+
+                width = entry.data.i32[2] - entry.data.i32[0];
+                height = entry.data.i32[3] - entry.data.i32[1];
+            }
+        }
+    }
+#endif
+    /* add by haojiefang fix messaging app request af region error 20210802, defect 11394288  end */
+
+    // modify by haojiefang for defect 11380119 20210730 begin
+    int32_t af_region[4] = { entry.data.i32[0], entry.data.i32[1],
+                             entry.data.i32[2], entry.data.i32[3]}; //startX, startY, endX, endY
+    // modify by haojiefang for defect 11380119 20210730 end
+    //begin jwei
+    if(strcmp("com.skype.raider", pkgName) == 0) {
+
+        camera_metadata_entry_t af_mode = request->find(ANDROID_CONTROL_AF_MODE);
+
+        if(af_mode.count > 0)
+        {   //only update in ANDROID_CONTROL_AF_MODE_AUTO
+            if(af_mode.data.u8[0] == ANDROID_CONTROL_AF_MODE_AUTO && !(minSize == width || minSize == height))
+            {
+
+                if (width < minSize && width == 0) {
+                    af_region_changed = true;
+                    int32_t center = (entry.data.i32[2] + entry.data.i32[0])/2;
+                    af_region[0] = (center - minSize/2) > 0 ? (center - minSize/2) : 0;
+                    af_region[2] = (center + minSize/2) < arrayWidth ?
+                                    (center + minSize/2) : arrayWidth;
+                }
+                if (height < minSize && height == 0) {
+                    af_region_changed = true;
+                    int32_t center = (entry.data.i32[3] + entry.data.i32[1])/2;
+                    af_region[1] = (center - minSize/2) > 0 ? (center - minSize/2) : 0;
+                    af_region[3] = (center + minSize/2) < arrayHeight ?
+                                    (center + minSize/2) : arrayHeight;
+                }
+                // uint8_t afMode = ANDROID_CONTROL_AF_MODE_CONTINUOUS_PICTURE;
+                // request->update(ANDROID_CONTROL_AF_MODE, &afMode, 1);
+                ALOGI("%d %s:updated skype AF",__LINE__, __FUNCTION__);
+            }
+        }
+    }
+    //end jwei 
+
+
+    if (width < minSize && width > 0) {
+        af_region_changed = true;
+        int32_t center = (entry.data.i32[2] + entry.data.i32[0])/2;
+        af_region[0] = (center - minSize/2) > 0 ? (center - minSize/2) : 0;
+        af_region[2] = (center + minSize/2) < arrayWidth ?
+                        (center + minSize/2) : arrayWidth;
+    }
+    if (height < minSize && height > 0) {
+        af_region_changed = true;
+        int32_t center = (entry.data.i32[3] + entry.data.i32[1])/2;
+        af_region[1] = (center - minSize/2) > 0 ? (center - minSize/2) : 0;
+        af_region[3] = (center + minSize/2) < arrayHeight ?
+                        (center + minSize/2) : arrayHeight;
+    }
+
+    if(af_region_changed) {
+        ALOGI("%d %s:updated af region (%d %d %d %d)",__LINE__, __FUNCTION__,
+            af_region[0], af_region[1],
+            af_region[2], af_region[3]);
+        request->update(ANDROID_CONTROL_AF_REGIONS, af_region, (sizeof(af_region)/sizeof(int32_t)));
+    }
+}
+
 status_t Camera3Device::RequestThread::prepareHalRequests() {
     ATRACE_CALL();
 
@@ -3894,7 +4040,7 @@ status_t Camera3Device::RequestThread::prepareHalRequests() {
                     };
                     if(IsTctCameraPrivileged3rdApp(curClient)) {
                         // UpdateFDConfig(deviceInfo, request);
-                        // UpdateAFRegion(deviceInfo, request);
+                        UpdateAFRegion(curClient.c_str(), parent->mDeviceInfo, &(it->metadata));
                         camera_metadata_entry_t availableFaceDetectModes = parent->mDeviceInfo.find(ANDROID_STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES);
                         camera_metadata_entry_t faceDetectMode = it->metadata.find(ANDROID_STATISTICS_FACE_DETECT_MODE);
 
