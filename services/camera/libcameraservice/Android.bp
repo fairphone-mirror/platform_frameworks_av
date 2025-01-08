@@ -93,6 +93,7 @@ cc_defaults {
         "camera_platform_flags_c_lib",
         "com.android.window.flags.window-aconfig_flags_c_lib",
         "media_permission-aidl-cpp",
+        "vendor.tcl.camera.algoservice-V2-ndk",
     ],
 
     static_libs: [
@@ -207,6 +208,8 @@ cc_library {
         "utils/LatencyHistogram.cpp",
         "utils/Utils.cpp",
         "utils/VirtualDeviceCameraIdMapper.cpp",
+        "fputils/FPCameraHelper.cpp",
+        "fputils/Camera3FPOutputStream.cpp",
     ],
 
     header_libs: [

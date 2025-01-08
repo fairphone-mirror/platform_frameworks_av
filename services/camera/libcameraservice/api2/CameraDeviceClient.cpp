@@ -44,6 +44,11 @@
 #include "HeicCompositeStream.h"
 #include "JpegRCompositeStream.h"
 
+//Begin added by juting.huang for cameraalgoservice
+#include "fputils/Camera3FPOutputStream.h"
+#include "fputils/FPCameraHelper.h"
+//End added by juting.huang for cameraalgoservice
+
 // Convenience methods for constructing binder::Status objects for error returns
 constexpr int32_t METADATA_QUEUE_SIZE = 1 << 20;
 
@@ -853,6 +858,16 @@ binder::Status CameraDeviceClient::endConfigure(int operatingMode,
     if (!mDevice.get()) {
         return STATUS_ERROR(CameraService::ERROR_DISCONNECTED, "Camera device no longer alive");
     }
+
+    //Begin added by juting.huang for cameraalgoservice
+    if (operatingMode == 0xFFFFFF0 && startTimeMs == 0)
+    {
+        int32_t scenetype = -1;
+        scenetype = Camera3FPOutputStream::getscenetype(sessionParams, mDevice->getVendorTagId());
+        mDevice->setSceneType(scenetype);
+        return binder::Status::ok();
+    }
+    //End added by juting.huang for cameraalgoservice
 
     res = SessionConfigurationUtils::checkOperatingMode(operatingMode, mDevice->info(),
             mCameraIdStr);
