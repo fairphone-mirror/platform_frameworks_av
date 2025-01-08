@@ -52,6 +52,10 @@
 #include "utils/SessionConfigurationUtils.h"
 
 #include "system/camera_metadata.h"
+//Begin added by juting.huang for cameraalgoservice
+#include "fputils/FPCameraHelper.h"
+#include "fputils/Camera3FPOutputStream.h"
+//End added by juting.huang for cameraalgoservice
 
 using namespace android::camera3;
 using namespace android::camera3::SessionConfigurationUtils;
@@ -228,6 +232,12 @@ void insertResultLocked(CaptureOutputStates& states, CaptureResult *result, uint
         SET_ERR("Failed to set request ID in metadata for frame %d", frameNumber);
         return;
     }
+
+    //Begin added by juting.huang for cameraalgoservice
+    if (Camera3FPOutputStream::CheckStreamFeature() > 0) {
+        FPCameraHelper::overrideResult(frameNumber, const_cast<CameraMetadata&>(result->mMetadata));
+    }
+    //End added by juting.huang for cameraalgoservice
 
     // Update vendor tag id for physical metadata
     for (auto& physicalMetadata : result->mPhysicalMetadatas) {

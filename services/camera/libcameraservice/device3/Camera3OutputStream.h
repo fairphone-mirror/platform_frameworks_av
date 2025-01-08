@@ -317,7 +317,9 @@ class Camera3OutputStream :
 
     status_t getBufferLockedCommon(ANativeWindowBuffer** anb, int* fenceFd);
 
-
+    //Begin added by juting.huang for cameraalgoservice
+    size_t            mStreamExtraBufferCount;
+    //End added by juting.huang for cameraalgoservice
   private:
 
     int               mTransform;
