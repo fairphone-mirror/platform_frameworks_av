@@ -533,8 +533,8 @@ status_t Camera3OutputStream::configureQueueLocked() {
         return res;
     }
     //Begin added by juting.huang for cameraalgoservice
-    if ((res = configureConsumerQueueLocked(true /*allowPreviewRespace*/)) != OK) {
-    //if ((res = configureConsumerQueueLocked(false /*allowPreviewRespace*/)) != OK) {
+    if ((res = configureConsumerQueueLocked(false /*allowPreviewRespace*/)) != OK) {
+    //if ((res = configureConsumerQueueLocked(true /*allowPreviewRespace*/)) != OK) {
     //End added by juting.huang for cameraalgoservice
         return res;
     }
