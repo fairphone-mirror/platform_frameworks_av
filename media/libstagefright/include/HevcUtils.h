@@ -117,6 +117,7 @@ public:
     static bool IsHevcIDR(const uint8_t *data, size_t size);
     // for MV-HEVC
     bool IsMvHevc();
+    void setMvHevc(bool isMvHevc) { mIsLhevc = isMvHevc; } // set mIsLhevc to true when mime type is video/x-mvhevc
     status_t makeLhvc(uint8_t *lhvc, size_t *lhvcSize, size_t nalSizeLength);
     void makeStri(uint8_t *stri);
     status_t makeHero(uint8_t *hero);
@@ -127,8 +128,8 @@ private:
     status_t parseSps(const uint8_t *data, size_t size, const uint8_t nuhLayerId);
     status_t parsePps(const uint8_t *data, size_t size, const uint8_t nuhLayerId);
     status_t parseProfileTierLevel(const bool profilePresentFlag, uint8_t maxNumSubLayersMinus1, NALBitReader &reader, const bool isInVps);
-    status_t parseHrdParameters(const bool cprmsPresentFlag, uint8_t maxNumSubLayersMinus1, size_t &bitCounter, NALBitReader *reader);
-    status_t parseSubLayerHrdParameters(const bool subPicHrdParamsPresentFlag, const uint8_t cpbCntMinus1, size_t &bitCounter, NALBitReader *reader);
+    status_t parseHrdParameters(const bool cprmsPresentFlag, uint8_t maxNumSubLayersMinus1, NALBitReader *reader);
+    status_t parseSubLayerHrdParameters(const bool subPicHrdParamsPresentFlag, const uint8_t cpbCntMinus1, NALBitReader *reader);
     status_t parseVpsExtension(const uint8_t maxLayersMinus1, const bool baseLayerInternalFlag, NALBitReader &reader);
     status_t parseSeiMessage(const uint8_t *data, size_t size);
     status_t parseThreeDimensionalReferenceInfoSei(const uint8_t *data, size_t size);
