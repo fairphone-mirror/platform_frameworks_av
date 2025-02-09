@@ -2454,6 +2454,10 @@ void CameraService::logConnectionAttempt(int clientPid, const std::string& clien
           static_cast<int>(effectiveApiLevel));
 }
 
+//begin [TCT-ROM][Camera] Begin by hongzhang/jialiwei for jira FP5U-430 camera solutions
+std::string CameraService::gClientPackageName;
+//end  [TCT-ROM][Camera] Begin by hongzhang/jialiwei for jira FP5U-430 camera solutions
+
 template <class CALLBACK, class CLIENT>
 Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const std::string& cameraId,
                                     int api1CameraId,
@@ -2572,6 +2576,42 @@ Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const std::str
         LOG_ALWAYS_FATAL_IF(client.get() == nullptr, "%s: CameraService in invalid state",
                 __FUNCTION__);
 
+        /*Begin FPS sync framework code on */
+        {
+            std::unordered_set<std::string> packagelist = {
+                "android.camera.cts",
+                "com.android.cts.verifier",
+                "com.google.android.apps.messaging",
+                "com.whatsapp",
+            };
+
+            if ((0 != clientPackageName.size()) && (packagelist.find(clientPackageName) != packagelist.end())) {
+                property_set("debug.camera.blacklist", "1");
+            } else {
+                property_set("debug.camera.blacklist", "0");
+            }
+        }
+
+        {
+            //send package name to hal
+            gClientPackageName = clientPackageName;
+
+            property_set("debug.camera.packagename", clientPackageName.c_str());
+        }
+
+        {
+            std::unordered_set<std::string> packagelist = {
+                "com.fps.camera",
+                "org.codeaurora.snapcam",
+            };
+
+            if ((0 != clientPackageName.size()) && (packagelist.find(clientPackageName) != packagelist.end())) {
+                property_set("debug.camera.whitelist", "1");
+            } else {
+                property_set("debug.camera.whitelist", "0");
+            }
+        }
+        /*End FPS sync framework code on */
         std::string monitorTags = isClientWatched(client.get()) ? mMonitorTags : std::string();
         err = client->initialize(mCameraProviderManager, monitorTags);
         if (err != OK) {

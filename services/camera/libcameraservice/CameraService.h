@@ -85,6 +85,7 @@ class CameraService :
     friend class BinderService<CameraService>;
     friend class CameraOfflineSessionClient;
 public:
+    static std::string gClientPackageName;  //[TCT-ROM][Camera] Begin by hongzhang/jialiwei for jira FP5U-430 camera solutions
     class Client;
     class BasicClient;
     class OfflineClient;
