@@ -26,6 +26,7 @@
 #include "api1/client2/Parameters.h"
 using aidl::vendor::tcl::camera::algoservice::ITctCameraAlgoService;
 
+#define DUMMY_FRAME 1
 namespace android{
 
 /**
