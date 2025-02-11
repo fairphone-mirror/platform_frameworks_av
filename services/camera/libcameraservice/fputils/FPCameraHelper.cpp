@@ -15,7 +15,7 @@
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
-#define DUMMY_FRAME 2
+#define DUMMY_FRAME 1
 
 using aidl::vendor::tcl::camera::algoservice::HandleParams;
 using aidl::vendor::tcl::camera::algoservice::ITctCameraAlgoService;
