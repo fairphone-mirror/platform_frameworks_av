@@ -34,7 +34,6 @@
     (type *)((char*)(ptr) - offsetof(type, member))
 #endif
 
-#define DUMMY_FRAME 1
 
 using aidl::vendor::tcl::camera::algoservice::HandleParams;
 using aidl::vendor::tcl::camera::algoservice::TctStreamConfiguration;
