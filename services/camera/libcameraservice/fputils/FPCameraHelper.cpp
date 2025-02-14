@@ -14,6 +14,7 @@
 #include <system/camera_metadata.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
+#include <aidlcommonsupport/NativeHandle.h>
 
 using aidl::vendor::tcl::camera::algoservice::HandleParams;
 using aidl::vendor::tcl::camera::algoservice::ITctCameraAlgoService;
@@ -108,14 +109,36 @@ int FPCameraHelper::overrideResult(uint32_t frameNumber, CameraMetadata& result)
     }
     camera_metadata_t* meta = const_cast<camera_metadata_t*>(result.getAndLock());
 
-    CameraMetadatas settings;
     CameraMetadatas metaOut;
     uint32_t size = get_camera_metadata_size(meta);
     ALOGD("%s: frameNumber:%u, result meta size:%" PRIu32, __FUNCTION__, frameNumber, size);
+    /*
+    CameraMetadatas settings;
     uint8_t* aidlCharsP = reinterpret_cast<uint8_t*>(const_cast<camera_metadata_t*>(meta));
     settings.metadata.assign(aidlCharsP, aidlCharsP + get_camera_metadata_size(meta));
     result.unlock(meta);
     auto status = tctCameraAlgoService->updateAndQueryResultMetadata(frameNumber, settings, &metaOut);
+    */
+    //Saving input meta into an AHardwareBuffer for lower transaction data in binder
+    HandleParams inMetaHandle;
+    sp<GraphicBuffer> metaGraphicBuffer = nullptr;
+    metaGraphicBuffer = new GraphicBuffer(size, 1, HAL_PIXEL_FORMAT_BLOB, GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN);
+    void* mapped = nullptr;
+    int res = metaGraphicBuffer->lockAsync(GRALLOC_USAGE_SW_WRITE_OFTEN, &mapped, -1);
+    if (res != OK) {
+        ALOGE("%s: Failed to lock the buffer: %s (%d)", __FUNCTION__, strerror(-res), res);
+    } else {
+        ALOGI("%s: Allocate succeed: %d", __FUNCTION__, res);
+        memcpy(mapped, reinterpret_cast<uint8_t*>(const_cast<camera_metadata_t*>(meta)), size);
+        metaGraphicBuffer->unlock();
+
+        inMetaHandle.width = size;
+        inMetaHandle.height = 1;
+        inMetaHandle.stride = size;
+        inMetaHandle.bufHandle = dupToAidl(AHardwareBuffer_getNativeHandle(metaGraphicBuffer->toAHardwareBuffer()));
+    }
+    result.unlock(meta);
+    auto status = tctCameraAlgoService->updateAndQueryResultMetadata_V2(frameNumber, inMetaHandle, &metaOut);  //Transporting preview metadata by AHardwarebuffer
     if (!status.isOk()) {
         ALOGE("%s: updateAndQueryResultMetadata failed, frameNumber:%u size:%" PRIu32, __FUNCTION__, frameNumber, size);
         return -1;
