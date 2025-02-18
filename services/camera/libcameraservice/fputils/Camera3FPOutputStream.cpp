@@ -478,7 +478,7 @@ bool Camera3FPOutputStream::doThreadLoop() {
                         native_handle_t* data = createNativeHandle(frame.anwReleaseFence);
                         if (data != nullptr) {
                             inputFrames[i].releaseFence = dupToAidl(data);
-                            native_handle_close(data);
+                            // native_handle_close(data); //Remove this for fixing double-close fd issue
                             native_handle_delete(data);
                         }
                         if (frame.anwBuffer->handle != nullptr) {
@@ -499,7 +499,7 @@ bool Camera3FPOutputStream::doThreadLoop() {
         native_handle_t* data = createNativeHandle(buffer.anwReleaseFence);
         if(data != nullptr) {
             inHandle.releaseFence = dupToAidl(data);
-            native_handle_close(data);
+            // native_handle_close(data); //Remove this for fixing double-close fd issue
             native_handle_delete(data);
         }
         if(buffer.anwBuffer->handle != nullptr) {
@@ -509,7 +509,7 @@ bool Camera3FPOutputStream::doThreadLoop() {
         mAlgoSession->streamProcess(buffer.frameNumber, inHandle, settings, &res);
     }
 
-    ALOGV("%s queueBuffer frameNum %" PRIu64 "usage 0x%x", __FUNCTION__, buffer.frameNumber, (uint32_t)buffer.anwBuffer->usage);
+    ALOGV("%s queueBuffer frameNum %" PRIu64 "usage 0x%x anwBufferHandle:%p anwReleaseFence:%d", __FUNCTION__, buffer.frameNumber, (uint32_t)buffer.anwBuffer->usage, buffer.anwBuffer->handle, buffer.anwReleaseFence);
     static_cast<ANativeWindow*>(mConsumer.get())->queueBuffer(mConsumer.get(), buffer.anwBuffer.get(), buffer.anwReleaseFence);
     return true;
 }
