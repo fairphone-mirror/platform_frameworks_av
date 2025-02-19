@@ -225,51 +225,51 @@ status_t HevcParameterSets::parseVps(const uint8_t* data, size_t size) {
     if (reader.atLeastNumBitsLeft(96)) {
         err = parseProfileTierLevel(1, maxSubLayersMinusOne, reader, 1);
         ALOGV("kMaxLayersMinus1 : %d", maxLayersMinusOne);
-        if (maxLayersMinusOne == 0) { // main(10) profile
-            mParams.add(kNumViews, 1);
-            if (err != OK) {
-                ALOGE("error parsing PTL in VPS");
-                return err;
-            }
-            ALOGV("PTL parsing correctly.");
-            return err;
-        }
     } else {
         reader.skipBits(96);
         return reader.overRead() ? ERROR_MALFORMED : OK;
     }
 
+    if (maxLayersMinusOne == 0) { // main(10) profile
+        mParams.add(kNumViews, 1);
+        if (err != OK) {
+            ALOGE("error parsing PTL in VPS for HEVC main profile");
+            return err;
+        }
+        ALOGV("PTL parsing correctly for HEVC main profile.");
+        return err;
+    } else if (maxLayersMinusOne != 0 && maxLayersMinusOne != 1) { // Currently we consider layer 0 and 1 only
+        ALOGE("VPS maxLayersMinusOne is greater than 1.");
+        return ERROR_MALFORMED;
+    }
     // Additional parsing bits for more information
     bool subLayerOrderingInfoPresentFlag;
     subLayerOrderingInfoPresentFlag = reader.getBits(1);
-     // 129 bits read until this point
-    bitCounter += 129;
-    ALOGV("maxSubLayersMinusOne : %d", maxSubLayersMinusOne);
+
     for (size_t i = (subLayerOrderingInfoPresentFlag? 0 : maxSubLayersMinusOne);
             i <= maxSubLayersMinusOne; i++) {
         //skip vps_max_dec_pic_buffering_minus1[i]
-        bitCounter += numBitsParsedExpGolomb( parseUEWithFallback(&reader, 0U) );
+        parseUEWithFallback(&reader, 0U);
         //skip vps_max_num_reorder_pics[i]
-        bitCounter += numBitsParsedExpGolomb( parseUEWithFallback(&reader, 0U) );
+        parseUEWithFallback(&reader, 0U);
         //skip vps_max_latency_increase_plus1[i]
-        bitCounter += numBitsParsedExpGolomb( parseUEWithFallback(&reader, 0U) );
+        parseUEWithFallback(&reader, 0U);
     }
 
     uint8_t maxLayerId, numLayerSetsMinusOne;
     // vps_max_layer_id
-    maxLayerId = reader.getBits(6); bitCounter += 6;
+    maxLayerId = reader.getBits(6);
     // vps_num_layer_sets_minus1
     numLayerSetsMinusOne = parseUEWithFallback(&reader, 0U);
-    bitCounter += numBitsParsedExpGolomb(numLayerSetsMinusOne);
     for (size_t i = 1; i <= numLayerSetsMinusOne; i++) {
         for (size_t j = 0; j <= maxLayerId; j++) {
             // Skip layer_id_included_flag[i][j]
-            reader.skipBits(1); bitCounter++;
+            reader.skipBits(1);
         }
     }
 
     // vps_timing_info_present_flag
-    bool timingInfoPresentFlag = reader.getBits(1); ++bitCounter;
+    bool timingInfoPresentFlag = reader.getBits(1);
     if (timingInfoPresentFlag) {
         // Skip vps_num_units_in_tick
         reader.skipBits(32);
@@ -277,24 +277,22 @@ status_t HevcParameterSets::parseVps(const uint8_t* data, size_t size) {
         reader.skipBits(32);
         // vps_poc_proportional_to_timing_flag
         bool pocProportionalToTimingFlag = reader.getBits(1);
-        bitCounter += 65;
         if (pocProportionalToTimingFlag) {
             // skip vps_num_ticks_poc_diff_one_minus1;
-            bitCounter += numBitsParsedExpGolomb( parseUEWithFallback(&reader, 0U) );
+            parseUEWithFallback(&reader, 0U);
         }
         // skip vps_num_hrd_parameters
         uint8_t numHrdParameters = parseUEWithFallback(&reader, 0U);
-        bitCounter += numBitsParsedExpGolomb( numHrdParameters );
         for (size_t i = 0; i < numHrdParameters; i++) {
             // skip hrd_layer_set_idx[i]
-            bitCounter += numBitsParsedExpGolomb( parseUEWithFallback(&reader, 0U) );
+            parseUEWithFallback(&reader, 0U);
             bool cprmsPresentFlag = false;
             if (i > 0) {
                 // cprms_present_flag[i]
-                cprmsPresentFlag = reader.getBits(1); ++bitCounter;
+                cprmsPresentFlag = reader.getBits(1);
             }
             err = parseHrdParameters(cprmsPresentFlag,
-                    maxSubLayersMinusOne, bitCounter, &reader);
+                    maxSubLayersMinusOne, &reader);
             if (err != OK) {
                 ALOGE("error parsing HRD Parameters");
                 return err;
@@ -302,11 +300,11 @@ status_t HevcParameterSets::parseVps(const uint8_t* data, size_t size) {
         }
     }
 
-    bool extensionFlag = reader.getBits(1); ++bitCounter;
+    bool extensionFlag = reader.getBits(1);
     if (extensionFlag) {
-        while (!byteAligned(bitCounter)) {
+        while(!byteAligned(reader.numBitsLeft())) {
             // skip vps_extension_alignment_bit_equal_to_one
-            reader.skipBits(1); ++bitCounter;
+            reader.skipBits(1);
         }
         status_t err = parseVpsExtension(kMaxLayersMinusOne,
                             baseLayerInternalFlag, reader);
@@ -638,18 +636,17 @@ status_t HevcParameterSets::parseProfileTierLevel(const bool profilePresentFlag,
     return reader.overRead() ? ERROR_MALFORMED : OK;
 }
 
-status_t HevcParameterSets::parseHrdParameters(const bool cprmsPresentFlag, uint8_t maxNumSubLayersMinus1, size_t &bitCounter, NALBitReader* reader) {
+status_t HevcParameterSets::parseHrdParameters(const bool cprmsPresentFlag, uint8_t maxNumSubLayersMinus1, NALBitReader* reader) {
     bool nalHrdParamPresentFlag=0, vclHrdParamPresentFlag=0, subPicHrdParamsPresentFlag = 0;
     if (cprmsPresentFlag) {
         // nal_hrd_parameters_present_flag
         nalHrdParamPresentFlag = reader->getBits(1);
         // vcl_hrd_parameters_present_flag
         vclHrdParamPresentFlag = reader->getBits(1);
-        bitCounter += 2;
 
         if (nalHrdParamPresentFlag || vclHrdParamPresentFlag) {
             // sub_pic_hrd_params_present_flag
-            subPicHrdParamsPresentFlag = reader->getBits(1); ++bitCounter;
+            subPicHrdParamsPresentFlag = reader->getBits(1);
             if (subPicHrdParamsPresentFlag) {
                 // Skip tick_divisor_minus2
                 reader->skipBits(8);
@@ -659,7 +656,6 @@ status_t HevcParameterSets::parseHrdParameters(const bool cprmsPresentFlag, uint
                 reader->skipBits(1);
                 // Skip dpb_output_delay_du_length_minus1
                 reader->skipBits(5);
-                bitCounter += 19;
             }
             // Skip bit_rate_scale
             reader->skipBits(4);
@@ -668,7 +664,6 @@ status_t HevcParameterSets::parseHrdParameters(const bool cprmsPresentFlag, uint
             if (subPicHrdParamsPresentFlag) {
                 // Skip cbp_size_du_scale
                 reader->skipBits(4);
-                bitCounter += 4;
             }
             // Skip initial_cpb_removal_delay_length_minus1
             reader->skipBits(5);
@@ -676,7 +671,6 @@ status_t HevcParameterSets::parseHrdParameters(const bool cprmsPresentFlag, uint
             reader->skipBits(5);
             // Skip dpb_output_delay_length_minus1
             reader->skipBits(5);
-            bitCounter += 23;
         }
     }
 
@@ -684,32 +678,31 @@ status_t HevcParameterSets::parseHrdParameters(const bool cprmsPresentFlag, uint
         uint8_t cpbCntMinus1=0;
         bool fixedPicRateGeneralFlag = 0, fixedPicRateWithinCvsFlag = 0, lowDelayHrdFlag = 0;
         // fixed_pic_rate_general_flag[i]
-        fixedPicRateGeneralFlag = reader->getBits(1); ++bitCounter;
+        fixedPicRateGeneralFlag = reader->getBits(1);
         if (!fixedPicRateGeneralFlag) {
             // fixed_pic_rate_within_cvs_flag[i]
-            fixedPicRateWithinCvsFlag = reader->getBits(1); ++bitCounter;
+            fixedPicRateWithinCvsFlag = reader->getBits(1);
         }
         if ( fixedPicRateWithinCvsFlag) {
             // Skip elemental_duration_in_tc_minus1[i]
-            bitCounter += numBitsParsedExpGolomb(parseUEWithFallback(reader, 0U));
+            parseUEWithFallback(reader, 0U);
         } else {
             // low_delay_hrd_flag[i]
-            lowDelayHrdFlag = reader->getBits(1); ++bitCounter;
+            lowDelayHrdFlag = reader->getBits(1);
         }
         if (!lowDelayHrdFlag) {
             // Skip cpb_cnt_minus1[i]
             cpbCntMinus1 = parseUEWithFallback(reader, 0U);
-            bitCounter += numBitsParsedExpGolomb(cpbCntMinus1);
         }
         if (nalHrdParamPresentFlag) {
-            status_t err = parseSubLayerHrdParameters(subPicHrdParamsPresentFlag, cpbCntMinus1, bitCounter, reader);
+            status_t err = parseSubLayerHrdParameters(subPicHrdParamsPresentFlag, cpbCntMinus1, reader);
             if (err != OK) {
                 ALOGE("error parsing Sub layer HRD Parameters (NAL)");
                 return err;
             }
         }
         if (vclHrdParamPresentFlag) {
-            status_t err = parseSubLayerHrdParameters(subPicHrdParamsPresentFlag, cpbCntMinus1, bitCounter, reader);
+            status_t err = parseSubLayerHrdParameters(subPicHrdParamsPresentFlag, cpbCntMinus1, reader);
             if (err != OK) {
                 ALOGE("error parsing Sub layer HRD Parameters (VCL)");
                 return err;
@@ -719,22 +712,21 @@ status_t HevcParameterSets::parseHrdParameters(const bool cprmsPresentFlag, uint
     return reader->overRead() ? ERROR_MALFORMED : OK;
 }
 
-status_t HevcParameterSets::parseSubLayerHrdParameters(const bool subPicHrdParamsPresentFlag, const uint8_t cpbCntMinus1, size_t &bitCounter, NALBitReader *reader) {
+status_t HevcParameterSets::parseSubLayerHrdParameters(const bool subPicHrdParamsPresentFlag, const uint8_t cpbCntMinus1, NALBitReader *reader) {
     uint8_t cpbCnt = cpbCntMinus1 + 1;
     for (size_t i = 0; i < cpbCnt; i++) {
         // Skip bit_rate_value_minus1[i]
-        bitCounter += numBitsParsedExpGolomb(parseUEWithFallback(reader, 0U));
+        parseUEWithFallback(reader, 0U);
         // Skip cpb_size_value_minus1[i]
-        bitCounter += numBitsParsedExpGolomb(parseUEWithFallback(reader, 0U));
+        parseUEWithFallback(reader, 0U);
         if (subPicHrdParamsPresentFlag) {
             // Skip cpb_size_du_value_minus1[i]
-            bitCounter += numBitsParsedExpGolomb(parseUEWithFallback(reader, 0U));
+            parseUEWithFallback(reader, 0U);
             // Skip bit_rate_du_value_minus1[i]
-            bitCounter += numBitsParsedExpGolomb(parseUEWithFallback(reader, 0U));
+            parseUEWithFallback(reader, 0U);
         }
         // Skip cbr_flag[i]
         reader->skipBits(1);
-        ++bitCounter;
     }
     return reader->overRead() ? ERROR_MALFORMED : OK;
 }
@@ -1124,20 +1116,6 @@ status_t HevcParameterSets::makeLhvc(uint8_t *lhvc, size_t *lhvcSize,
     }
     CHECK_EQ(header - size, lhvc);
     return OK;
-}
-
-void HevcParameterSets::makeStri(uint8_t *stri) {
-    ALOGV("makeStri()");
-    // Please refer to Stereo-video-isobmff-extensions for details.
-    uint8_t *header = stri;
-    // unsigned int(4) reserved
-    *header = 0;
-    // FIXME : unsigned int(1) eye_views_reversed - device-dependent information should be included
-    // unsigned int(1) has_additional_views = 0
-    // unsinged int(1) has_right_eye_view = 1
-    // unsigned int(1) has_left_eye_view = 1
-    *header |= 0x03;
-    ALOGV("stri : %#04x", *stri);
 }
 
 status_t HevcParameterSets::makeHero(uint8_t *hero) {
