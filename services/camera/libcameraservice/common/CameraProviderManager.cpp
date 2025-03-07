@@ -3650,10 +3650,18 @@ void CameraProviderManager::filterLogicalCameraIdsLocked(
             removedIds.erase(foundId);
             break;
         }
+        //modified by hongzhang, don't remove physical camera id E
+        // deviceIds.erase(std::remove_if(deviceIds.begin(), deviceIds.end(),
+        //         [&removedIds](const std::string& s) {
+        //         return removedIds.find(s) != removedIds.end();}),
+        //         deviceIds.end());
         deviceIds.erase(std::remove_if(deviceIds.begin(), deviceIds.end(),
-                [&removedIds](const std::string& s) {
-                return removedIds.find(s) != removedIds.end();}),
-                deviceIds.end());
+        [this, &removedIds](const std::string& s) {
+            auto deviceInfo = findDeviceInfoLocked(s);
+            bool isLogical = (deviceInfo != nullptr) && deviceInfo->mIsLogicalCamera;
+            return isLogical && (removedIds.find(s) != removedIds.end());
+        }), deviceIds.end());
+        //modified by hongzhang, don't remove physical camera id X
     }
 }
 
