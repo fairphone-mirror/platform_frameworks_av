@@ -636,6 +636,7 @@ class Camera3Device :
     sp<HalInterface> mInterface;
 
     CameraMetadata             mDeviceInfo;
+    std::map<int32_t, CameraMetadata>     mSubDevicesInfo;
     bool                       mSupportNativeZoomRatio;
     bool                       mIsCompositeJpegRDisabled;
     bool                       mIsCompositeHeicDisabled;

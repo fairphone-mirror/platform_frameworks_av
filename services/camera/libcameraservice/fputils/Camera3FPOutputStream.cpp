@@ -55,7 +55,7 @@ Camera3FPOutputStream::Camera3FPOutputStream(
         android_dataspace dataSpace, camera_stream_rotation_t rotation,
         nsecs_t timestampOffset, const std::string& physicalCameraId,
         const std::unordered_set<int32_t> &sensorPixelModesUsed, IPCTransport transport, int32_t extraBufferCnt,
-        int32_t scenetype, CameraMetadata* characteristics, int setId, bool isMultiResolution)
+        int32_t scenetype, CameraMetadata* characteristics, std::map<int32_t, CameraMetadata>& subDevicesInfo, int setId, bool isMultiResolution)
         : Camera3OutputStream (id, consumer,
         width, height, format,
         dataSpace, rotation,
@@ -74,6 +74,20 @@ Camera3FPOutputStream::Camera3FPOutputStream(
         res = native_window_get_consumer_usage(static_cast<ANativeWindow*>(consumer.get()), &usage);
         if (res != OK) {
             ALOGE("%s: getting end point usage failed: %s (%d).", __FUNCTION__, strerror(-res), res);
+        }
+        if (subDevicesInfo.size()) {
+            ALOGI("%s: subDevicesInfo got size:%d", __FUNCTION__, subDevicesInfo.size());
+            for (auto  iter = subDevicesInfo.begin(); iter != subDevicesInfo.end(); iter++) {
+                const camera_metadata_t* meta = iter->second.getAndLock();
+                CameraMetadatas subDeviceInfo;
+                uint8_t*  aidlCharsP = reinterpret_cast<uint8_t*>(const_cast<camera_metadata_t*>(meta));
+                subDeviceInfo.metadata.assign(aidlCharsP, aidlCharsP + get_camera_metadata_size(meta));
+                int32_t ret = 0;
+                mTctCameraAlgoService->addSubDeviceInfo(iter->first, subDeviceInfo, &ret);
+                iter->second.unlock(meta);
+            }
+        } else {
+            ALOGI("%s: no subDevicesInfo got", __FUNCTION__);
         }
         const camera_metadata_t* meta = characteristics->getAndLock();
         CameraMetadatas settings;
@@ -103,7 +117,7 @@ Camera3FPOutputStream::Camera3FPOutputStream(
         android_dataspace dataSpace, camera_stream_rotation_t rotation,
         nsecs_t timestampOffset, const std::string& physicalCameraId,
         const std::unordered_set<int32_t> &sensorPixelModesUsed, IPCTransport transport, int32_t extraBufferCnt,
-        int32_t scenetype, CameraMetadata* characteristics, int setId, bool isMultiResolution)
+        int32_t scenetype, CameraMetadata* characteristics, std::map<int32_t, CameraMetadata>& subDevicesInfo, int setId, bool isMultiResolution)
         : Camera3OutputStream (id,
         width, height, format, consumerUsage,
         dataSpace, rotation,
@@ -116,6 +130,20 @@ Camera3FPOutputStream::Camera3FPOutputStream(
     mTctCameraAlgoService   = FPCameraHelper::getAlgoService();
 
     if (mTctCameraAlgoService != NULL) {
+        if (subDevicesInfo.size()) {
+            ALOGI("%s: subDevicesInfo got size:%d", __FUNCTION__, subDevicesInfo.size());
+            for (auto  iter = subDevicesInfo.begin(); iter != subDevicesInfo.end(); iter++) {
+                const camera_metadata_t* meta = iter->second.getAndLock();
+                CameraMetadatas subDeviceInfo;
+                uint8_t*  aidlCharsP = reinterpret_cast<uint8_t*>(const_cast<camera_metadata_t*>(meta));
+                subDeviceInfo.metadata.assign(aidlCharsP, aidlCharsP + get_camera_metadata_size(meta));
+                int32_t ret = 0;
+                mTctCameraAlgoService->addSubDeviceInfo(iter->first, subDeviceInfo, &ret);
+                iter->second.unlock(meta);
+            }
+        } else {
+            ALOGI("%s: no subDevicesInfo got", __FUNCTION__);
+        }
         const camera_metadata_t* meta = characteristics->getAndLock();
         CameraMetadatas settings;
         uint8_t*  aidlCharsP = reinterpret_cast<uint8_t*>(const_cast<camera_metadata_t*>(meta));

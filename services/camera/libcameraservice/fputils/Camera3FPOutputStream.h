@@ -55,7 +55,7 @@ public:
             android_dataspace dataSpace, camera_stream_rotation_t rotation,
             nsecs_t timestampOffset, const std::string& physicalCameraId,
             const std::unordered_set<int32_t> &sensorPixelModesUsed, IPCTransport transport, int32_t extraBufferCnt,
-            int32_t scenetype, CameraMetadata* characteristics, int setId = CAMERA3_STREAM_SET_ID_INVALID, bool isMultiResolution = false);
+            int32_t scenetype, CameraMetadata* characteristics, std::map<int32_t, CameraMetadata>& subDevicesInfo, int setId = CAMERA3_STREAM_SET_ID_INVALID, bool isMultiResolution = false);
 
     Camera3FPOutputStream(
             const std::string cameraId, int id,
@@ -63,7 +63,7 @@ public:
             android_dataspace dataSpace, camera_stream_rotation_t rotation,
             nsecs_t timestampOffset, const std::string& physicalCameraId,
             const std::unordered_set<int32_t> &sensorPixelModesUsed, IPCTransport transport, int32_t extraBufferCnt,
-            int32_t scenetype, CameraMetadata* characteristics, int setId = CAMERA3_STREAM_SET_ID_INVALID, bool isMultiResolution = false);
+            int32_t scenetype, CameraMetadata* characteristics, std::map<int32_t, CameraMetadata>& subDevicesInfo, int setId = CAMERA3_STREAM_SET_ID_INVALID, bool isMultiResolution = false);
 
     virtual ~Camera3FPOutputStream();
     static int32_t CheckStreamFeature();
