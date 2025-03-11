@@ -213,6 +213,23 @@ status_t AidlCamera3Device::initialize(sp<CameraProviderManager> manager,
         session->close();
         return res;
     }
+    //Begin added by juting.huang for saving multicam characteristics
+    camera_metadata_entry activPhysicalID = mDeviceInfo.find(ANDROID_LOGICAL_MULTI_CAMERA_PHYSICAL_IDS);
+    const uint8_t* pIds  = activPhysicalID.data.u8;
+    size_t         start = 0;
+    for (size_t entryIndex = 0; entryIndex < activPhysicalID.count; ++entryIndex) {
+        if ('\0' == pIds[entryIndex]) {
+            const char* physicalId = reinterpret_cast<const char*>(pIds + start);
+            int32_t subID         = atoll(physicalId);
+            CameraMetadata subDeviceInfo;
+            res = manager->getCameraCharacteristics(physicalId, mOverrideForPerfClass, &subDeviceInfo, mRotationOverride);
+            mSubDevicesInfo[subID] = subDeviceInfo;
+            ALOGI("Save characteristics of deviceID:%zu", subID);
+            // Next char array start byte
+            start                  = entryIndex + 1;
+        }
+    }
+    //End added by juting.huang for saving multicam characteristics
     mSupportNativeZoomRatio = manager->supportNativeZoomRatio(mId);
     mIsCompositeJpegRDisabled = manager->isCompositeJpegRDisabled(mId);
 

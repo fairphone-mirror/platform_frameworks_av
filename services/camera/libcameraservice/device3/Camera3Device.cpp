@@ -1222,13 +1222,13 @@ status_t Camera3Device::createStream(const std::vector<sp<Surface>>& consumers,
             newStream = new Camera3FPOutputStream(mId, mNextStreamId,
                     width, height, format, consumerUsage, dataSpace, rotation,
                     mTimestampOffset, physicalCameraId, sensorPixelModesUsed, transport, extraBufferCnt,
-                    scenetype, &mDeviceInfo, streamSetId, isMultiResolution);
+                    scenetype, &mDeviceInfo, mSubDevicesInfo, streamSetId, isMultiResolution);
         }
         else {
             newStream = new Camera3FPOutputStream(mId, mNextStreamId, consumers[0],
                     width, height, format, dataSpace, rotation,
                     mTimestampOffset, physicalCameraId, sensorPixelModesUsed, transport, extraBufferCnt,
-                    scenetype, &mDeviceInfo, streamSetId, isMultiResolution);
+                    scenetype, &mDeviceInfo, mSubDevicesInfo, streamSetId, isMultiResolution);
         }
     //End added by juting.huang for cameraalgoservice
     } else if (consumers.size() == 0 && hasDeferredConsumer) {
