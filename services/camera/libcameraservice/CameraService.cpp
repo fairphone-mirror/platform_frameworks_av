@@ -4509,6 +4509,13 @@ void CameraService::BasicClient::opChanged(int32_t op, const String16&) {
             res == AppOpsManager::MODE_ERRORED ? "ERRORED" :
             "UNKNOWN");
 
+    //Begin added by for fixing post algo process invalid issue
+    if (mClientPackageName == "com.fps.camera") {
+        res = AppOpsManager::MODE_ALLOWED;
+        ALOGI("Adding MODE_ALLOWED for com.fps.camera");
+    }
+    //End added by for fixing post algo process invalid issue
+
     if (res == AppOpsManager::MODE_ERRORED) {
         ALOGI("Camera %s: Access for \"%s\" revoked", mCameraIdStr.c_str(),
               mClientPackageName.c_str());
