@@ -26,6 +26,7 @@
 #include <android/hardware/camera/device/3.2/types.h>
 #include <android-base/properties.h>
 #include <utils/Utils.h>
+#include <cutils/properties.h>
 
 namespace android {
 namespace frameworks {
@@ -49,6 +50,8 @@ using hardware::camera2::params::SessionConfiguration;
 
 static constexpr int32_t CAMERA_REQUEST_METADATA_QUEUE_SIZE = 1 << 20 /* 1 MB */;
 static constexpr int32_t CAMERA_RESULT_METADATA_QUEUE_SIZE = 1 << 20 /* 1 MB */;
+
+static constexpr int32_t CAMERA_RESULT_METADATA_QUEUE_SIZE_DEBUG = 1 << 23;
 
 Return<void> HidlCameraDeviceUser::disconnect() {
     mDeviceRemote->disconnect();
@@ -75,6 +78,13 @@ bool HidlCameraDeviceUser::initDevice() {
     }
 
     int32_t resFMQSize = CAMERA_RESULT_METADATA_QUEUE_SIZE;
+
+    char build_type[PROPERTY_VALUE_MAX] = {0};
+    if(property_get_bool("persist.vendor.camera.debugdata.enable3A", 0)) {
+        resFMQSize = CAMERA_RESULT_METADATA_QUEUE_SIZE_DEBUG;
+    }
+    ALOGI("%s: final result FMQ size %d", __FUNCTION__, resFMQSize);
+
     mCaptureResultMetadataQueue =
         std::make_shared<CaptureResultMetadataQueue>(static_cast<size_t>(resFMQSize),
                                                      false /* non blocking */);
