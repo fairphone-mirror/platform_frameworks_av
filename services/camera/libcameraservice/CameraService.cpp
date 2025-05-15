@@ -1978,6 +1978,9 @@ status_t CameraService::handleEvictionsLocked(const std::string& cameraId, int c
                 return err;
             }
 
+            //start add by binchang.liang
+            handleFPSEvictionsLocked(packageName, &mActiveClientManager, ownerPids.size(), &ownerPids[0], &priorityScores[0]);
+            //end add by binchang.liang
             // Update all active clients' priorities
             std::map<int,resource_policy::ClientPriority> pidToPriorityMap;
             for (size_t i = 0; i < ownerPids.size() - 1; i++) {
@@ -4302,6 +4305,12 @@ bool CameraService::BasicClient::isValidAudioRestriction(int32_t mode) {
 }
 
 status_t CameraService::BasicClient::handleAppOpMode(int32_t mode) {
+    //Begin add by binchang.liang
+    if (mClientPackageName == "com.fps.camera" && mode == AppOpsManager::MODE_IGNORED) {
+        mode = AppOpsManager::MODE_ALLOWED;
+        ALOGI("handleAppOpMode Adding MODE_ALLOWED for com.fps.camera");
+    }
+    //End add by binchang.liang
     if (mode == AppOpsManager::MODE_ERRORED) {
         ALOGI("Camera %s: Access for \"%s\" has been revoked",
                 mCameraIdStr.c_str(), mClientPackageName.c_str());
@@ -6693,5 +6702,52 @@ void CameraService::clearInjectionParameters() {
     mInjectionExternalCamId = "";
     mInjectionStatusListener->removeListener();
 }
+
+//start add by binchang.liang
+/**
+ * The lower the score, the higher the priority.
+ * Don't change content of currentActiveClientManager, only override scores.
+ * ownerPids's last value is incoming client
+ */
+ const char* CameraService::FpsCameraPriorityLowerAppList[] = {
+    "com.android.settings"
+};
+void CameraService::handleFPSEvictionsLocked(std::string incomingPackageName __attribute__((unused)), CameraService::CameraClientManager *currentActiveClientManager,
+                                                size_t ownerPidsSize, int32_t *ownerPids, int32_t *scores) {
+    for (auto& client : currentActiveClientManager->getAll()) {
+        auto clientSp = client->getValue();
+        if(clientSp != nullptr) {
+            std::string clientName =  clientSp->getPackageName();
+            int clientPid = clientSp->getClientPid();
+            //Begin modified by xiaoming-zhong for [defect][11604024][evicting conflicting client] on 2021/10/14
+            //Make app in FpsCameraPriorityLowerAppList priority lower.
+            for(size_t i = 0; i < (sizeof(FpsCameraPriorityLowerAppList)/sizeof(*FpsCameraPriorityLowerAppList)); i++) {
+                std::string tmp(FpsCameraPriorityLowerAppList[i]);
+                if(tmp == clientName) {
+                    for(size_t j = 0; j < ownerPidsSize; j++) {
+                        if(ownerPids[j] == clientSp->getClientPid()) {
+                            *(scores+j) = resource_policy::SERVICE_ADJ;
+                            ALOGI("current package: %s. pid %d,scores %d", clientName.c_str(), clientPid,resource_policy::SERVICE_ADJ);
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+            //End modified by xiaoming-zhong for [defect][11604024][evicting conflicting client] on 2021/10/14
+        }
+    }
+    //Begin modified by xiaoming-zhong for [defect][11604024][evicting conflicting client] on 2021/10/14
+    //Make app in FpsCameraPriorityLowerAppList priority lower.
+    for(size_t i = 0; i < (sizeof(FpsCameraPriorityLowerAppList)/sizeof(*FpsCameraPriorityLowerAppList)); i++) {
+        std::string tmp(FpsCameraPriorityLowerAppList[i]);
+        if(tmp == incomingPackageName) {
+            *(scores+(ownerPidsSize-1)) = resource_policy::SERVICE_ADJ;
+            break;
+        }
+    }
+    //End modified by xiaoming-zhong for [defect][11604024][evicting conflicting client] on 2021/10/14
+}
+//end add by binchang.liang
 
 } // namespace android

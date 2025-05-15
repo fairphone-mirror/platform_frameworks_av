@@ -1613,6 +1613,11 @@ private:
     void updateTorchUidMapLocked(const std::string& cameraId, int uid);
 
     VirtualDeviceCameraIdMapper mVirtualDeviceCameraIdMapper;
+    //start add by binchang.liang
+    const static char* FpsCameraPriorityLowerAppList[];
+    void handleFPSEvictionsLocked(std::string incomingPackageName, CameraService::CameraClientManager *currentActiveClientManager,
+                                        size_t ownerPidsSize, int32_t *ownerPids, int32_t *scores);
+    //end add by binchang.liang
 };
 
 } // namespace android
