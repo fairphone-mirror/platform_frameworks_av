@@ -2028,6 +2028,20 @@ status_t CameraService::handleEvictionsLocked(const std::string& cameraId, int c
 
         // Find clients that would be evicted
         auto evicted = mActiveClientManager.wouldEvict(clientDescriptor);
+        //begin [fairp] start porting for rom3.0 for avoid conflict with faceunlock,
+        bool isNativeCameraApp = false;
+        if(std::string("com.fps.camera") == packageName) {
+            ALOGW("[fairps] camera connect conflicting with facelock");
+            isNativeCameraApp =true;
+        }
+        const auto& clients = mActiveClientManager.getAll();
+        auto clientIter = std::find_if(clients.begin(), clients.end(),  [](const auto& client) {
+            return client->getValue() && client->getValue()->getPackageName() == std::string("com.android.settings");});
+        if (isNativeCameraApp && clientIter != clients.end()) {
+            ALOGW("[fairps] add setttings evicted");
+            evicted.push_back(*clientIter);
+        }
+        //end [fairp] start porting for rom3.0 for avoid conflict with faceunlock,
 
         // If the incoming client was 'evicted,' higher priority clients have the camera in the
         // background, so we cannot do evictions
@@ -4374,10 +4388,10 @@ bool CameraService::BasicClient::isValidAudioRestriction(int32_t mode) {
 status_t CameraService::BasicClient::handlePermissionResult(
         PermissionChecker::PermissionResult result) {
     //Begin add by binchang.liang
-    if (mClientPackageName == "com.fps.camera" && mode == AppOpsManager::MODE_IGNORED) {
-        mode = AppOpsManager::MODE_ALLOWED;
-        ALOGI("handleAppOpMode Adding MODE_ALLOWED for com.fps.camera");
-    }
+    // if (mClientPackageName == "com.fps.camera" && mode == AppOpsManager::MODE_IGNORED) {
+    //     mode = AppOpsManager::MODE_ALLOWED;
+    //     ALOGI("handleAppOpMode Adding MODE_ALLOWED for com.fps.camera");
+    // }
     //End add by binchang.liang
     if (result == PermissionChecker::PERMISSION_HARD_DENIED) {
         ALOGI("Camera %s: Access for \"%s\" has been revoked", mCameraIdStr.c_str(),
