@@ -111,7 +111,7 @@ int FPCameraHelper::overrideResult(uint32_t frameNumber, CameraMetadata& result)
 
     CameraMetadatas metaOut;
     uint32_t size = get_camera_metadata_size(meta);
-    ALOGD("%s: frameNumber:%u, result meta size:%" PRIu32, __FUNCTION__, frameNumber, size);
+    ALOGV("%s: frameNumber:%u, result meta size:%" PRIu32, __FUNCTION__, frameNumber, size);
     /*
     CameraMetadatas settings;
     uint8_t* aidlCharsP = reinterpret_cast<uint8_t*>(const_cast<camera_metadata_t*>(meta));
@@ -128,7 +128,7 @@ int FPCameraHelper::overrideResult(uint32_t frameNumber, CameraMetadata& result)
     if (res != OK) {
         ALOGE("%s: Failed to lock the buffer: %s (%d)", __FUNCTION__, strerror(-res), res);
     } else {
-        ALOGI("%s: Allocate succeed: %d", __FUNCTION__, res);
+        ALOGV("%s: Allocate succeed: %d", __FUNCTION__, res);
         memcpy(mapped, reinterpret_cast<uint8_t*>(const_cast<camera_metadata_t*>(meta)), size);
         metaGraphicBuffer->unlock();
 
