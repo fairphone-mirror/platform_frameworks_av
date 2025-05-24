@@ -17,7 +17,7 @@
 #include <cstddef>
 #define LOG_TAG "Camera3-FPOutStrm"
 #define ATRACE_TAG ATRACE_TAG_CAMERA
-#define LOG_NDEBUG 0
+// #define LOG_NDEBUG 0
 
 #include "Camera3FPOutputStream.h"
 #include <aidl/vendor/tcl/camera/algoservice/ITctCameraAlgoServiceCb.h>
