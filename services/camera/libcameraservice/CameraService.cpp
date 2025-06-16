@@ -2727,6 +2727,12 @@ Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const std::str
                                 multiuser_get_user_id(clientAttribution.uid)));
             }
         }
+        /*add by guojun , only for get activityname in CameraServiceProxy.java*/
+        else{
+                mCameraServiceProxyWrapper->getRotateAndCropOverride(
+                    clientPackageName, facing, multiuser_get_user_id(clientUid));
+        }
+        /*add by guojun , only for get activityname in CameraServiceProxy.java*/
 
         bool autoframingSupported = true;
         auto availableAutoframingEntry = chars.find(ANDROID_CONTROL_AUTOFRAMING_AVAILABLE);
