@@ -765,7 +765,9 @@ void MediaCodecSource::resume(int64_t resumeStartTimeUs) {
 
 status_t MediaCodecSource::feedEncoderInputBuffers() {
     MediaBufferBase* mbuf = NULL;
-    while (!mAvailEncoderInputIndices.empty() && mPuller->readBuffer(&mbuf)) {
+    /* Modified at 2025-06-19 for FPS-2871, dealing with null pointer dereference to avoid crash */
+    //while (!mAvailEncoderInputIndices.empty() && mPuller->readBuffer(&mbuf)) {
+    while (!mAvailEncoderInputIndices.empty() && mPuller != NULL && mPuller->readBuffer(&mbuf)) {
         if (!mEncoder) {
             return BAD_VALUE;
         }
