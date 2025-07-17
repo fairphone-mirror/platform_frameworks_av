@@ -78,9 +78,7 @@ Camera3OutputStream::Camera3OutputStream(int id,
         mMirrorMode(mirrorMode),
         mDequeueBufferLatency(kDequeueLatencyBinSize),
         mIPCTransport(transport) {
-    //Begin added by juting.huang for cameraalgoservice
-    mStreamExtraBufferCount = 0;
-    //End added by juting.huang for cameraalgoservice
+
     if (mConsumer == NULL) {
         ALOGE("%s: Consumer is NULL!", __FUNCTION__);
         mState = STATE_ERROR;
@@ -114,9 +112,7 @@ Camera3OutputStream::Camera3OutputStream(int id,
         mMirrorMode(mirrorMode),
         mDequeueBufferLatency(kDequeueLatencyBinSize),
         mIPCTransport(transport) {
-    //Begin added by juting.huang for cameraalgoservice
-    mStreamExtraBufferCount = 0;
-    //End added by juting.huang for cameraalgoservice
+
     if (format != HAL_PIXEL_FORMAT_BLOB && format != HAL_PIXEL_FORMAT_RAW_OPAQUE) {
         ALOGE("%s: Bad format for size-only stream: %d", __FUNCTION__,
                 format);
@@ -157,9 +153,6 @@ Camera3OutputStream::Camera3OutputStream(int id,
         mMirrorMode(mirrorMode),
         mDequeueBufferLatency(kDequeueLatencyBinSize),
         mIPCTransport(transport) {
-    //Begin added by juting.huang for cameraalgoservice
-    mStreamExtraBufferCount = 0;
-    //End added by juting.huang for cameraalgoservice
     // Deferred consumer only support preview surface format now.
     if (format != HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
         ALOGE("%s: Deferred consumer only supports IMPLEMENTATION_DEFINED format now!",
@@ -209,9 +202,7 @@ Camera3OutputStream::Camera3OutputStream(int id, camera_stream_type_t type,
         mMirrorMode(mirrorMode),
         mDequeueBufferLatency(kDequeueLatencyBinSize),
         mIPCTransport(transport) {
-    //Begin added by juting.huang for cameraalgoservice
-    mStreamExtraBufferCount = 0;
-    //End added by juting.huang for cameraalgoservice
+
     bool needsReleaseNotify = setId > CAMERA3_STREAM_SET_ID_INVALID;
     mBufferProducerListener = new BufferProducerListener(this, needsReleaseNotify);
 
@@ -220,9 +211,6 @@ Camera3OutputStream::Camera3OutputStream(int id, camera_stream_type_t type,
 
 
 Camera3OutputStream::~Camera3OutputStream() {
-    //Begin added by juting.huang for cameraalgoservice
-    mStreamExtraBufferCount = 0;
-    //End added by juting.huang for cameraalgoservice
     disconnectLocked();
 }
 
@@ -532,10 +520,7 @@ status_t Camera3OutputStream::configureQueueLocked() {
     if ((res = Camera3IOStreamBase::configureQueueLocked()) != OK) {
         return res;
     }
-    //Begin added by juting.huang for cameraalgoservice
-    if ((res = configureConsumerQueueLocked(false /*allowPreviewRespace*/)) != OK) {
-    //if ((res = configureConsumerQueueLocked(true /*allowPreviewRespace*/)) != OK) {
-    //End added by juting.huang for cameraalgoservice
+    if ((res = configureConsumerQueueLocked(true /*allowPreviewRespace*/)) != OK) {
         return res;
     }
 
@@ -643,10 +628,7 @@ status_t Camera3OutputStream::configureConsumerQueueLocked(bool allowPreviewResp
     }
 
     mTotalBufferCount = maxConsumerBuffers + camera_stream::max_buffers;
-    //Begin added by juting.huang for cameraalgoservice
-    ALOGI("%s: stream extra buffer count:%zu", __FUNCTION__, mStreamExtraBufferCount);
-    mTotalBufferCount += mStreamExtraBufferCount;
-    //End added by juting.huang for cameraalgoservice
+
     int timestampBase = getTimestampBase();
     bool isDefaultTimeBase = (timestampBase ==
             OutputConfiguration::TIMESTAMP_BASE_DEFAULT);

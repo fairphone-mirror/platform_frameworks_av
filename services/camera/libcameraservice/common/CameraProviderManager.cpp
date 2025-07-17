@@ -965,11 +965,6 @@ void CameraProviderManager::onServiceRegistration(const String16 &name, const sp
     }
 
     IPCThreadState::self()->flushCommands();
-
-    //Begin added by juting.huang for cameraalgoservice knowing cameras ready -- AIDL
-    property_set("debug.camera.ready", "1");
-    ALOGI("%s: HAL cameras registration finished", __FUNCTION__);
-    //End added by juting.huang for cameraalgoservice knowing cameras ready -- AIDL
 }
 
 hardware::Return<void> CameraProviderManager::onRegistration(
@@ -990,11 +985,6 @@ hardware::Return<void> CameraProviderManager::onRegistration(
     }
 
     IPCThreadState::self()->flushCommands();
-
-    //Begin added by juting.huang for cameraalgoservice knowing cameras ready -- HIDL
-    property_set("debug.camera.ready", "1");
-    ALOGI("%s: HAL cameras registration finished", __FUNCTION__);
-    //End added by juting.huang for cameraalgoservice knowing cameras ready -- HIDL
 
     return hardware::Return<void>();
 }
