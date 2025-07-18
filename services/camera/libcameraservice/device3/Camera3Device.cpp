@@ -1273,7 +1273,7 @@ status_t Camera3Device::createStream(const std::vector<SurfaceHolder>& consumers
                     scenetype, &mDeviceInfo, mSubDevicesInfo, streamSetId, isMultiResolution);
         }
         else {
-            newStream = new Camera3FPOutputStream(mId, mNextStreamId, consumers[0],
+            newStream = new Camera3FPOutputStream(mId, mNextStreamId, consumers[0].mSurface,
                     width, height, format, dataSpace, rotation,
                     mTimestampOffset, physicalCameraId, sensorPixelModesUsed, transport, extraBufferCnt,
                     scenetype, &mDeviceInfo, mSubDevicesInfo, streamSetId, isMultiResolution);

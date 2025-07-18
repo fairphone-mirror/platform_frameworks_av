@@ -39,7 +39,7 @@ class Camera3FPOutputStream :
         public Camera3OutputStream,
         public Camera3StreamBufferListener {
 public:
-    static bool negotiate(const std::string cameraId, int streamId, const std::vector<sp<Surface>>& consumers, bool hasDeferredConsumer,
+    static bool negotiate(const std::string cameraId, int streamId, const std::vector<SurfaceHolder>& consumers, bool hasDeferredConsumer,
         uint32_t width, uint32_t height, uint32_t format, uint64_t consumerUsage,
         android_dataspace dataSpace, camera_stream_rotation_t rotation,
         const std::string& physicalCameraId, int streamSetId, int32_t &extraBufferCnt, int32_t scenetype);

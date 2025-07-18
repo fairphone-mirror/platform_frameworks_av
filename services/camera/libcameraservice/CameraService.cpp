@@ -2730,7 +2730,8 @@ Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const std::str
         /*add by guojun , only for get activityname in CameraServiceProxy.java*/
         else{
                 mCameraServiceProxyWrapper->getRotateAndCropOverride(
-                    clientPackageName, facing, multiuser_get_user_id(clientUid));
+                        clientPackageName, facing,
+                        multiuser_get_user_id(clientAttribution.uid));
         }
         /*add by guojun , only for get activityname in CameraServiceProxy.java*/
 
@@ -4697,8 +4698,9 @@ void CameraService::BasicClient::opChanged(int32_t op, const String16&) {
     }
 
     //Begin added by for fixing post algo process invalid issue
-    if (mClientPackageName == "com.fps.camera") {
-        res = AppOpsManager::MODE_ALLOWED;
+    if (getPackageName() == "com.fps.camera") {
+        int32_t appOpMode = AppOpsManager::MODE_ALLOWED;
+        res = appOpModeToPermissionResult(appOpMode);
         ALOGI("Adding MODE_ALLOWED for com.fps.camera");
     }
     //End added by for fixing post algo process invalid issue
@@ -7044,14 +7046,14 @@ void CameraService::handleFPSEvictionsLocked(std::string incomingPackageName __a
         auto clientSp = client->getValue();
         if(clientSp != nullptr) {
             std::string clientName =  clientSp->getPackageName();
-            int clientPid = clientSp->getClientPid();
+            int clientPid = clientSp->getClientCallingPid();
             //Begin modified by xiaoming-zhong for [defect][11604024][evicting conflicting client] on 2021/10/14
             //Make app in FpsCameraPriorityLowerAppList priority lower.
             for(size_t i = 0; i < (sizeof(FpsCameraPriorityLowerAppList)/sizeof(*FpsCameraPriorityLowerAppList)); i++) {
                 std::string tmp(FpsCameraPriorityLowerAppList[i]);
                 if(tmp == clientName) {
                     for(size_t j = 0; j < ownerPidsSize; j++) {
-                        if(ownerPids[j] == clientSp->getClientPid()) {
+                        if(ownerPids[j] == clientSp->getClientCallingPid()) {
                             *(scores+j) = resource_policy::SERVICE_ADJ;
                             ALOGI("current package: %s. pid %d,scores %d", clientName.c_str(), clientPid,resource_policy::SERVICE_ADJ);
                             break;

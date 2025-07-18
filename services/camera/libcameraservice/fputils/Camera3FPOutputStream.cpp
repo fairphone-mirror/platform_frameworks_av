@@ -321,7 +321,7 @@ int32_t Camera3FPOutputStream::getscenetype(const CameraMetadata& sessionParams,
 }
 
 bool Camera3FPOutputStream::negotiate(
-        const std::string cameraId, int streamId, const std::vector<sp<Surface>>& consumers, bool hasDeferredConsumer,
+        const std::string cameraId, int streamId, const std::vector<SurfaceHolder>& consumers, bool hasDeferredConsumer,
         uint32_t width, uint32_t height, uint32_t format, uint64_t consumerUsage,
         android_dataspace dataSpace, camera_stream_rotation_t rotation,
         const std::string& physicalCameraId, int streamSetId, int32_t &extraBufferCnt, int32_t scenetype) {
@@ -330,7 +330,7 @@ bool Camera3FPOutputStream::negotiate(
 
     if (consumers.size() != 0){
         auto pFrameSync = FrameSynchronizer::getInstance();
-        if (pFrameSync != nullptr && pFrameSync->isRegisteredSurface(consumers[0].get())) {
+        if (pFrameSync != nullptr && pFrameSync->isRegisteredSurface(consumers[0].mSurface.get())) {
             return true;
         }
     }
@@ -341,7 +341,7 @@ bool Camera3FPOutputStream::negotiate(
             usage = consumerUsage;
         }
         else {
-            status_t res = native_window_get_consumer_usage(static_cast<ANativeWindow*>(consumers[0].get()), &usage);
+            status_t res = native_window_get_consumer_usage(static_cast<ANativeWindow*>(consumers[0].mSurface.get()), &usage);
             if (res != OK) {
                 ALOGE("%s: getting end point usage failed: %s (%d).", __FUNCTION__, strerror(-res), res);
             }
