@@ -253,6 +253,17 @@ status_t AudioRecord::set(
           inputSource, sampleRate, format, channelMask, frameCount, notificationFrames,
           sessionId, transferType, flags, mClientAttributionSource.toString().c_str(), uid, pid);
 
+    // FPS-3295 add for Camera app begin
+    String8 keyValue;
+    if (strstr(mClientAttributionSource.toString().c_str(), "com.fps.camera")) {
+        keyValue.append("fp_camera_app=true");
+        AudioSystem::setParameters(keyValue);
+    } else {
+        keyValue.append("fp_camera_app=false");
+        AudioSystem::setParameters(keyValue);
+    }
+    // FPS-3295 add for Camera app end
+
     // TODO b/182392553: refactor or remove
     pid_t callingPid = IPCThreadState::self()->getCallingPid();
     pid_t myPid = getpid();
