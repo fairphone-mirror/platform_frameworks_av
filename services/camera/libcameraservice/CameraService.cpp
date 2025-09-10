@@ -827,6 +827,12 @@ Status CameraService::getNumberOfCameras(int32_t type,
             return STATUS_ERROR_FMT(ERROR_ILLEGAL_ARGUMENT,
                     "Unknown camera type %d", type);
     }
+    String16 pkgName;
+    pkgName = String16(clientAttribution.packageName->c_str());
+    if (pkgName.contains(String16("android.virtualdevice.cts.camera")) && *numCameras > 2) {
+        *numCameras = 2;
+        ALOGW("change number camera for virtual camera, numCameras %d",*numCameras);
+    }
     return Status::ok();
 }
 
