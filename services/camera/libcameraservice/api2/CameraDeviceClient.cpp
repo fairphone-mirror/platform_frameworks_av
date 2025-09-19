@@ -108,12 +108,16 @@ CameraDeviceClient::CameraDeviceClient(
     ATRACE_CALL();
     ALOGI("CameraDeviceClient %s: Opened", cameraId.c_str());
     //KEYSTONE(I34931815600fcaaeca6399e603d5b6d5d68f995b,b/376704172)
-    // char value[PROPERTY_VALUE_MAX];
-    // property_get("persist.vendor.camera.privapp.list", value, "");
-    // std::string packagelist(value);
-    // if (packagelist.find(clientPackageName) != std::string::npos) {
-    //     mPrivilegedClient = true;
-    // }
+    const std::string clientPackageName = clientAttribution.packageName.value_or("");
+    if (clientPackageName.size() > 0)
+    {
+        char value[PROPERTY_VALUE_MAX];
+        property_get("persist.vendor.camera.privapp.list", value, "");
+        std::string packagelist(value);
+        if (packagelist.find(clientPackageName) != std::string::npos) {
+            mPrivilegedClient = true;
+        }
+    }
 }
 
 status_t CameraDeviceClient::initialize(sp<CameraProviderManager> manager,
