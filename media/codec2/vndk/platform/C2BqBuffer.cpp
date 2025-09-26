@@ -372,7 +372,7 @@ private:
             uint32_t format,
             C2MemoryUsage usage,
             std::shared_ptr<C2GraphicBlock> *block /* nonnull */,
-            C2Fence *c2Fence) {
+            C2Fence *c2Fence, bool requestHwFence = false) {
         // We have an IGBP now.
         C2AndroidMemoryUsage androidUsage = usage;
         status_t status{};
@@ -436,43 +436,50 @@ private:
                 mBuffers[slot].clear();
             }
 
-            status_t status = fence->wait(kFenceWaitTimeMs);
-            if (status == -ETIME) {
-                // fence is not signalled yet.
-                if (syncVar) {
-                    (void)mProducer->cancelBuffer(slot, hFenceWrapper.getHandle()).isOk();
-                    syncVar->lock();
-                    dequeueable = syncVar->notifyQueuedLocked(&waitId);
-                    syncVar->unlock();
-                    if (c2Fence) {
-                        *c2Fence = dequeueable ? C2Fence() :
-                                _C2FenceFactory::CreateSurfaceFence(mSyncMem, waitId);
-                    }
-                } else {
-                    (void)mProducer->cancelBuffer(slot, hFenceWrapper.getHandle()).isOk();
+            if (requestHwFence) {
+                if (c2Fence) {
+                    int fenceFd = fence->dup();
+                    *c2Fence = _C2FenceFactory::CreateSyncFence(fenceFd);
                 }
-                return C2_BLOCKING;
-            }
-            if (status != android::NO_ERROR) {
-                ALOGD("buffer fence wait error %d", status);
-                if (syncVar) {
-                    (void)mProducer->cancelBuffer(slot, hFenceWrapper.getHandle()).isOk();
-                    syncVar->lock();
-                    syncVar->notifyQueuedLocked();
-                    syncVar->unlock();
-                    if (c2Fence) {
-                        *c2Fence = C2Fence();
+            } else {
+                status_t status = fence->wait(kFenceWaitTimeMs);
+                if (status == -ETIME) {
+                    // fence is not signalled yet.
+                    if (syncVar) {
+                        (void)mProducer->cancelBuffer(slot, hFenceWrapper.getHandle()).isOk();
+                        syncVar->lock();
+                        dequeueable = syncVar->notifyQueuedLocked(&waitId);
+                        syncVar->unlock();
+                        if (c2Fence) {
+                            *c2Fence = dequeueable ? C2Fence() :
+                                    _C2FenceFactory::CreateSurfaceFence(mSyncMem, waitId);
+                        }
+                    } else {
+                        (void)mProducer->cancelBuffer(slot, hFenceWrapper.getHandle()).isOk();
                     }
-                } else {
-                    (void)mProducer->cancelBuffer(slot, hFenceWrapper.getHandle()).isOk();
+                    return C2_BLOCKING;
                 }
-                return C2_BAD_VALUE;
-            } else if (mRenderCallback) {
-                nsecs_t signalTime = fence->getSignalTime();
-                if (signalTime >= 0 && signalTime < INT64_MAX) {
-                    mRenderCallback(mProducerId, slot, signalTime);
-                } else {
-                    ALOGV("got fence signal time of %lld", (long long)signalTime);
+                if (status != android::NO_ERROR) {
+                    ALOGD("buffer fence wait error %d", status);
+                    if (syncVar) {
+                        (void)mProducer->cancelBuffer(slot, hFenceWrapper.getHandle()).isOk();
+                        syncVar->lock();
+                        syncVar->notifyQueuedLocked();
+                        syncVar->unlock();
+                         if (c2Fence) {
+                            *c2Fence = C2Fence();
+                        }
+                    } else {
+                        (void)mProducer->cancelBuffer(slot, hFenceWrapper.getHandle()).isOk();
+                    }
+                    return C2_BAD_VALUE;
+                } else if (mRenderCallback) {
+                    nsecs_t signalTime = fence->getSignalTime();
+                    if (signalTime >= 0 && signalTime < INT64_MAX) {
+                        mRenderCallback(mProducerId, slot, signalTime);
+                    } else {
+                        ALOGV("got fence signal time of %lld", (long long)signalTime);
+                    }
                 }
             }
         }
@@ -599,6 +606,7 @@ public:
         }
 
         static int kMaxIgbpRetryDelayUs = 10000;
+        bool requestHwFence = false;
 
         std::unique_lock<std::mutex> lock(mMutex);
         if (mLastDqLogTs == 0) {
@@ -612,6 +620,12 @@ public:
                           (long long)(now - mLastDqTs), mDqFailure);
                 }
                 mLastDqLogTs = now;
+            }
+        }
+        if (fence) {
+            requestHwFence = ((long long)usage.expected & (1ULL << 47)) ? true : false;
+            if (requestHwFence) {
+                usage.expected &= (~(1ULL << 47));
             }
         }
         if (mProducerId == 0) {
@@ -629,7 +643,7 @@ public:
 
             return C2_OK;
         }
-        c2_status_t status = fetchFromIgbp_l(width, height, format, usage, block, fence);
+        c2_status_t status = fetchFromIgbp_l(width, height, format, usage, block, fence, requestHwFence);
         if (status == C2_BLOCKING) {
             lock.unlock();
             if (!fence) {
