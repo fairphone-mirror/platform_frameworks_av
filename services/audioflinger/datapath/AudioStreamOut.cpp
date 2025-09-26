@@ -75,9 +75,7 @@ status_t AudioStreamOut::getPresentationPosition(uint64_t *frames, struct timesp
 
     if (mHalFormatHasProportionalFrames &&
             (flags & AUDIO_OUTPUT_FLAG_DIRECT) == AUDIO_OUTPUT_FLAG_DIRECT) {
-// QTI_BEGIN: 2024-11-26: Audio: Revert "av: Fix frames consumed for pcm during flush scenarios"
         *frames = halPosition / mRateMultiplier;
-// QTI_END: 2024-11-26: Audio: Revert "av: Fix frames consumed for pcm during flush scenarios"
     } else {
         // For offloaded MP3 and other compressed formats, and linear PCM.
         *frames = halPosition;
@@ -92,7 +90,8 @@ status_t AudioStreamOut::open(
         struct audio_config *config,
         audio_output_flags_t *flagsPtr,
         const char *address,
-        const std::vector<playback_track_metadata_v7_t>& sourceMetadata)
+        const std::vector<playback_track_metadata_v7_t>& sourceMetadata,
+        int32_t mixPortHalId)
 {
     sp<StreamOutHalInterface> outStream;
 
@@ -108,7 +107,8 @@ status_t AudioStreamOut::open(
             config,
             address,
             &outStream,
-            sourceMetadata);
+            sourceMetadata,
+            mixPortHalId);
     ALOGV("AudioStreamOut::open(), HAL returned stream %p, sampleRate %d, format %#x,"
             " channelMask %#x, status %d", outStream.get(), config->sample_rate, config->format,
             config->channel_mask, status);

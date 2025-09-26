@@ -111,9 +111,7 @@ public:
      *                smoothly, considering delays and smoothness factor;
      *          false otherwise.
      */
-// QTI_BEGIN: 2024-11-14: Video: sfplugin: Reset fixes of Pipeline watcher and CCodecBufferChannel
     bool pipelineFull() const;
-// QTI_END: 2024-11-14: Video: sfplugin: Reset fixes of Pipeline watcher and CCodecBufferChannel
 
     /**
      * Return elapsed processing time of a work item, nth from the longest

@@ -2720,11 +2720,12 @@ class AudioPolicyManagerTestClientOpenFails : public AudioPolicyManagerTestClien
                         const sp<DeviceDescriptorBase>& device,
                         uint32_t * latencyMs,
                         audio_output_flags_t *flags,
-                        audio_attributes_t attributes) override {
+                        audio_attributes_t attributes,
+                        int32_t mixPortHalId) override {
         return mSimulateFailure ? BAD_VALUE :
                 AudioPolicyManagerTestClient::openOutput(
                         module, output, halConfig, mixerConfig, device, latencyMs, flags,
-                        attributes);
+                        attributes, mixPortHalId);
     }
 
     status_t openInput(audio_module_handle_t module,
@@ -2733,10 +2734,11 @@ class AudioPolicyManagerTestClientOpenFails : public AudioPolicyManagerTestClien
                        audio_devices_t * device,
                        const String8 & address,
                        audio_source_t source,
-                       audio_input_flags_t flags) override {
+                       audio_input_flags_t flags,
+                       int32_t mixPortHalId) override {
         return mSimulateFailure ? BAD_VALUE :
                 AudioPolicyManagerTestClient::openInput(
-                        module, input, config, device, address, source, flags);
+                        module, input, config, device, address, source, flags, mixPortHalId);
     }
 
     void setSimulateFailure(bool simulateFailure) { mSimulateFailure = simulateFailure; }

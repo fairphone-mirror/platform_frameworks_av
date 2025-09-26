@@ -269,7 +269,8 @@ status_t PatchPanel::createAudioPatch_l(const struct audio_patch* patch,
                                                             outputDevice,
                                                             outputDeviceAddress,
                                                             &flags,
-                                                            attributes);
+                                                            attributes,
+                                                            0 /*mixPortHalId*/);
                     ALOGV("mAfPatchPanelCallback->openOutput_l() returned %p", thread.get());
                     if (thread == 0) {
                         status = NO_MEMORY;
@@ -317,7 +318,8 @@ status_t PatchPanel::createAudioPatch_l(const struct audio_patch* patch,
                                                                     source,
                                                                     flags,
                                                                     outputDevice,
-                                                                    outputDeviceAddress);
+                                                                    outputDeviceAddress,
+                                                                    0 /*mixPortHalId*/);
                 ALOGV("mAfPatchPanelCallback->openInput_l() returned %p inChannelMask %08x",
                       thread.get(), config.channel_mask);
                 if (thread == 0) {

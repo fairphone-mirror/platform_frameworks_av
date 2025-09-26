@@ -100,6 +100,7 @@ private:
     status_t mInitCheck;
     bool mIsRealTimeRecording;
     bool mIsBackgroundMode;
+// QTI_BEGIN: 2018-01-23: Audio: stagefright: Make classes customizable and add AV extensions
 protected:
 // QTI_END: 2018-01-23: Audio: stagefright: Make classes customizable and add AV extensions
     bool mUse4ByteNalLength;
@@ -156,14 +157,10 @@ protected:
 
     sp<AMessage> mMetaKeys;
 
-// QTI_BEGIN: 2018-10-18: Audio: libstagefright: Protect MPEG4Writer start time access
     void setStartTimestampUs(int64_t timeUs, int64_t *trackStartTime);
-// QTI_END: 2018-10-18: Audio: libstagefright: Protect MPEG4Writer start time access
     int64_t getStartTimestampUs();  // Not const
     int32_t getStartTimeOffsetBFramesUs();
-// QTI_BEGIN: 2018-10-18: Audio: libstagefright: Protect MPEG4Writer start time access
     int64_t getStartTimeOffsetTimeUs(int64_t startTime);
-// QTI_END: 2018-10-18: Audio: libstagefright: Protect MPEG4Writer start time access
     status_t startTracks(MetaData *params);
     size_t numTracks();
     int64_t estimateMoovBoxSize(int32_t bitRate);

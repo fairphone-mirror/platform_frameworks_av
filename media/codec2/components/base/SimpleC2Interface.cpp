@@ -28,7 +28,6 @@ namespace android {
 
 /* SimpleInterface */
 
-// QTI_BEGIN: 2022-05-01: Video: codec2 components: fix subscribed indices setter
 static C2R SubscribedParamIndicesSetter(
         bool mayBlock, C2InterfaceHelper::C2P<C2SubscribedParamIndicesTuning> &me) {
     (void)mayBlock;
@@ -37,7 +36,6 @@ static C2R SubscribedParamIndicesSetter(
     return C2R::Ok();
 }
 
-// QTI_END: 2022-05-01: Video: codec2 components: fix subscribed indices setter
 SimpleInterface<void>::BaseParams::BaseParams(
         const std::shared_ptr<C2ReflectorHelper> &reflector,
         C2String name,
@@ -196,9 +194,7 @@ SimpleInterface<void>::BaseParams::BaseParams(
             .withDefault(C2SubscribedParamIndicesTuning::AllocShared(0u))
             .withFields({ C2F(mSubscribedParamIndices, m.values[0]).any(),
                           C2F(mSubscribedParamIndices, m.values).any() })
-// QTI_BEGIN: 2022-05-01: Video: codec2 components: fix subscribed indices setter
             .withSetter(SubscribedParamIndicesSetter)
-// QTI_END: 2022-05-01: Video: codec2 components: fix subscribed indices setter
             .build());
 
     /* TODO

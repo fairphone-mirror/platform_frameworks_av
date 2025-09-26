@@ -48,9 +48,7 @@ static const int kDumpLockSleepUs = 20000;
 // QTI_BEGIN: 2018-01-23: Audio: stagefright: Make classes customizable and add AV extensions
 #include "mediaplayerservice/AVNuExtensions.h"
 // QTI_END: 2018-01-23: Audio: stagefright: Make classes customizable and add AV extensions
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
 #include "mediaplayerservice/AVMediaServiceExtensions.h"
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
 
 namespace android {
 
@@ -762,13 +760,11 @@ status_t NuPlayerDriver::reset() {
         notifyListener_l(MEDIA_STOPPED);
     }
 
-// QTI_BEGIN: 2018-04-09: Video: media: Print Stats when application stops playback
     if (property_get_bool("persist.debug.sf.stats", false)) {
         Vector<String16> args;
         dump(-1, args);
     }
 
-// QTI_END: 2018-04-09: Video: media: Print Stats when application stops playback
     mState = STATE_RESET_IN_PROGRESS;
     mPlayer->resetAsync();
 
@@ -924,10 +920,8 @@ status_t NuPlayerDriver::getMetadata(
             Metadata::kSeekAvailable,
             mPlayerFlags & NuPlayer::Source::FLAG_CAN_SEEK);
 
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
     AVMediaServiceUtils::get()->appendMeta(&meta);
 
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
     return OK;
 }
 

@@ -78,9 +78,7 @@ status_t HevcParameterSets::addNalUnit(const uint8_t* data, size_t size) {
             }
             err = parsePps(data + 2, size - 2);
             break;
-// QTI_BEGIN: 2023-11-08: Video: libstagefright: Change to handle AUD nal unit type
         case 35:  // AUD
-// QTI_END: 2023-11-08: Video: libstagefright: Change to handle AUD nal unit type
         case 39:  // Prefix SEI
         case 40:  // Suffix SEI
             // Ignore
@@ -227,7 +225,6 @@ status_t HevcParameterSets::parseSps(const uint8_t* data, size_t size) {
         }
     }
     // Skip sps_seq_parameter_set_id
-// QTI_END: 2024-09-13: Video: MPEG4Writer: MVHEVC mimetype definition and mpeg4writer
     skipUE(&reader);
     uint8_t chromaFormatIdc = parseUEWithFallback(&reader, 0);
     mParams.add(kChromaFormatIdc, chromaFormatIdc);
@@ -456,7 +453,6 @@ status_t HevcParameterSets::makeHvcc(uint8_t *hvcc, size_t *hvccSize,
         }
         ++numOfArrays;
         size += 3;
-// QTI_BEGIN: 2024-11-05: Video: MPEG4Writer: Changes to support SEI metadata for multiview HEVC am: aeb787d7f2
         for (size_t j = 0; j < numNalUnits; ++j) {
             if (getType(j) != type) {
                 continue;

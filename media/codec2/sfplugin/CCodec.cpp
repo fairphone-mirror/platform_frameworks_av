@@ -2570,10 +2570,8 @@ void CCodec::signalResume() {
             // and the buffers are send to the client as soon as the codec
             // releases them
             ALOGI("Resuming with all input buffers still with codec");
-// QTI_BEGIN: 2023-06-23: Video: sfplugin: do not fail resume call if inputs slots are active
         } else if (err == WOULD_BLOCK) {
              ALOGI("Resuming with input buffers not a fatal error");
-// QTI_END: 2023-06-23: Video: sfplugin: do not fail resume call if inputs slots are active
         } else {
             ALOGE("Resume request for Input Buffers failed");
             mCallback->onError(err, ACTION_CODE_FATAL);
@@ -2600,11 +2598,9 @@ void CCodec::signalResume() {
         state->set(RUNNING);
     }
 
-// QTI_BEGIN: 2023-06-23: Video: sfplugin: do not fail resume call if inputs slots are active
      if (err != WOULD_BLOCK) {
         mChannel->requestInitialInputBuffers(std::move(clientInputBuffers));
      }
-// QTI_END: 2023-06-23: Video: sfplugin: do not fail resume call if inputs slots are active
 }
 
 void CCodec::signalSetParameters(const sp<AMessage> &msg) {

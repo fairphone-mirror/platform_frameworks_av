@@ -361,7 +361,7 @@ status_t DeviceHalAidl::getInputBufferSize(struct audio_config* config, size_t* 
     {
         std::lock_guard l(mLock);
         RETURN_STATUS_IF_ERROR(mMapper.prepareToOpenStream(
-                        0 /*handle*/, aidlDevice, aidlFlags, aidlSource,
+                        0 /*handle*/, 0 /*mixPortHalId*/, aidlDevice, aidlFlags, aidlSource,
                         &cleanups, &aidlConfig, &mixPortConfig, &aidlPatch));
     }
     *config = VALUE_OR_RETURN_STATUS(
@@ -494,8 +494,10 @@ status_t DeviceHalAidl::openOutputStream(
         audio_output_flags_t flags, struct audio_config* config,
         const char* address,
         sp<StreamOutHalInterface>* outStream,
-        const std::vector<playback_track_metadata_v7_t>& sourceMetadata) {
-    AUGMENT_LOG(D, "handle: %d devices %0x flags %0x", handle, devices, flags);
+        const std::vector<playback_track_metadata_v7_t>& sourceMetadata,
+        int32_t mixPortHalId) {
+    AUGMENT_LOG(D, "handle: %d devices %0x flags %0x mixPortHalId %d",
+                handle, devices, flags, mixPortHalId);
 
     TIME_CHECK();
     RETURN_IF_MODULE_NOT_INIT(NO_INIT);
@@ -521,8 +523,8 @@ status_t DeviceHalAidl::openOutputStream(
     Hal2AidlMapper::Cleanups cleanups(mMapperAccessor);
     {
         std::lock_guard l(mLock);
-        RETURN_STATUS_IF_ERROR(mMapper.prepareToOpenStream(aidlHandle, aidlDevice, aidlFlags,
-                        AudioSource::SYS_RESERVED_INVALID /*only needed for input*/,
+        RETURN_STATUS_IF_ERROR(mMapper.prepareToOpenStream(aidlHandle, mixPortHalId, aidlDevice,
+                        aidlFlags, AudioSource::SYS_RESERVED_INVALID /*only needed for input*/,
                         &cleanups, &aidlConfig, &mixPortConfig, &aidlPatch));
     }
     *config = VALUE_OR_RETURN_STATUS(
@@ -594,8 +596,10 @@ status_t DeviceHalAidl::openInputStream(
         struct audio_config* config, audio_input_flags_t flags,
         const char* address, audio_source_t source,
         audio_devices_t outputDevice, const char* outputDeviceAddress,
-        sp<StreamInHalInterface>* inStream) {
-    AUGMENT_LOG(D, "handle: %d devices %0x flags %0x", handle, devices, flags);
+        sp<StreamInHalInterface>* inStream,
+        int32_t mixPortHalId) {
+    AUGMENT_LOG(D, "handle: %d devices %0x flags %0x mixPortHalId %d",
+                handle, devices, flags, mixPortHalId);
     TIME_CHECK();
     RETURN_IF_MODULE_NOT_INIT(NO_INIT);
     if (inStream == nullptr || config == nullptr) {
@@ -620,7 +624,7 @@ status_t DeviceHalAidl::openInputStream(
     {
         std::lock_guard l(mLock);
         RETURN_STATUS_IF_ERROR(mMapper.prepareToOpenStream(
-                        aidlHandle, aidlDevice, aidlFlags, aidlSource,
+                        aidlHandle, mixPortHalId, aidlDevice, aidlFlags, aidlSource,
                         &cleanups, &aidlConfig, &mixPortConfig, &aidlPatch));
     }
     *config = VALUE_OR_RETURN_STATUS(

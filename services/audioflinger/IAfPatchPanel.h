@@ -75,7 +75,8 @@ public:
             audio_source_t source,
             audio_input_flags_t flags,
             audio_devices_t outputDevice,
-            const String8& outputDeviceAddress) REQUIRES(mutex()) = 0;
+            const String8& outputDeviceAddress,
+            int32_t mixPortHalId) REQUIRES(mutex()) = 0;
     virtual sp<IAfThreadBase> openOutput_l(audio_module_handle_t module,
             audio_io_handle_t* output,
             audio_config_t* halConfig,
@@ -83,7 +84,8 @@ public:
             audio_devices_t deviceType,
             const String8& address,
             audio_output_flags_t* flags,
-            audio_attributes_t attributes) REQUIRES(mutex()) = 0;
+            audio_attributes_t attributes,
+            int32_t mixPortHalId) REQUIRES(mutex()) = 0;
     virtual audio_utils::mutex& mutex() const
             RETURN_CAPABILITY(audio_utils::AudioFlinger_Mutex) = 0;
     virtual const DefaultKeyedVector<audio_module_handle_t, AudioHwDevice*>&

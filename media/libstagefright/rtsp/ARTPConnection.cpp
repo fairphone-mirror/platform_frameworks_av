@@ -106,10 +106,8 @@ void ARTPConnection::addStream(
         const sp<ASessionDescription> &sessionDesc,
         size_t index,
         const sp<AMessage> &notify,
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
         bool injected,
         bool isIPV6) {
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
     sp<AMessage> msg = new AMessage(kWhatAddStream, this);
     msg->setInt32("rtp-socket", rtpSocket);
     msg->setInt32("rtcp-socket", rtcpSocket);
@@ -117,9 +115,7 @@ void ARTPConnection::addStream(
     msg->setSize("index", index);
     msg->setMessage("notify", notify);
     msg->setInt32("injected", injected);
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
     msg->setInt32("isIPV6", isIPV6);
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
     msg->post();
 }
 
@@ -315,10 +311,8 @@ void ARTPConnection::MakeRTPSocketPair(
                 remotePort + 1, strerror(errno));
         return;
     }
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
 }
 
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
 void ARTPConnection::onMessageReceived(const sp<AMessage> &msg) {
     switch (msg->what()) {
         case kWhatAddStream:

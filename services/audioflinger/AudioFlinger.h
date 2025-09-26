@@ -338,7 +338,8 @@ private:
             audio_source_t source,
             audio_input_flags_t flags,
             audio_devices_t outputDevice,
-            const String8& outputDeviceAddress) final REQUIRES(mutex());
+            const String8& outputDeviceAddress,
+            int32_t mixPortHalId) final REQUIRES(mutex());
     sp<IAfThreadBase> openOutput_l(audio_module_handle_t module,
             audio_io_handle_t* output,
             audio_config_t* halConfig,
@@ -346,7 +347,8 @@ private:
             audio_devices_t deviceType,
             const String8& address,
             audio_output_flags_t* flags,
-            audio_attributes_t attributes) final REQUIRES(mutex());
+            audio_attributes_t attributes,
+            int32_t mixPortHalId) final REQUIRES(mutex());
     const DefaultKeyedVector<audio_module_handle_t, AudioHwDevice*>&
             getAudioHwDevs_l() const final REQUIRES(mutex(), hardwareMutex()) {
               return mAudioHwDevs;

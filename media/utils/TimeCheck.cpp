@@ -42,9 +42,7 @@ namespace android::mediautils {
 // Note: The sum of kDefaultTimeOutDurationMs and kDefaultSecondChanceDurationMs
 // should be no less than 2 seconds, otherwise spurious timeouts
 // may occur with system suspend.
-// QTI_BEGIN: 2025-02-04: Audio: media: revert internal modifications related to timecheck
 static constexpr int kDefaultTimeoutDurationMs = 3000;
-// QTI_END: 2025-02-04: Audio: media: revert internal modifications related to timecheck
 
 // Due to suspend abort not incrementing the monotonic clock,
 // we allow another second chance timeout after the first timeout expires.
@@ -221,9 +219,7 @@ TimeCheck::TimeCheck(std::string_view tag, OnTimerFunc&& onTimer, Duration reque
     : mTimeCheckHandler{ std::make_shared<TimeCheckHandler>(
             tag, std::move(onTimer), crashOnTimeout, requestedTimeoutDuration,
             secondChanceDuration, std::chrono::system_clock::now(), getThreadIdWrapper()) }
-// QTI_BEGIN: 2025-02-04: Audio: media: revert internal modifications related to timecheck
     , mTimerHandle(requestedTimeoutDuration.count() == 0
-// QTI_END: 2025-02-04: Audio: media: revert internal modifications related to timecheck
               /* for TimeCheck we don't consider a non-zero secondChanceDuration here */
               ? getTimeCheckThread().trackTask(mTimeCheckHandler->tag)
               : getTimeCheckThread().scheduleTask(

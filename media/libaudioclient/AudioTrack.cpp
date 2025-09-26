@@ -654,10 +654,8 @@ status_t AudioTrack::set(
         mOffloadInfoCopy.sample_rate = sampleRate;
         mOffloadInfoCopy.channel_mask = channelMask;
         mOffloadInfoCopy.stream_type = streamType;
-// QTI_BEGIN: 2025-01-31: Audio: av: Initialize offload info properly
         mOffloadInfoCopy.usage = mAttributes.usage;
         mOffloadInfoCopy.bit_width = audio_bytes_per_sample(format) * 8;
-// QTI_END: 2025-01-31: Audio: av: Initialize offload info properly
     }
 
     mVolume[AUDIO_INTERLEAVE_LEFT] = 1.0f;
@@ -1117,12 +1115,16 @@ void AudioTrack::pause()
 
             // TODO: check return code for getRenderPosition.
 
+// QTI_BEGIN: 2014-03-06: Audio: AudioTrack: When paused, return cached playback position
             uint32_t halFrames;
             AudioSystem::getRenderPosition(mOutput, &halFrames, &mPausedPosition);
+// QTI_END: 2014-03-06: Audio: AudioTrack: When paused, return cached playback position
             ALOGV("%s(%d): for offload, cache current position %u",
                     __func__, mPortId, mPausedPosition);
+// QTI_BEGIN: 2014-03-06: Audio: AudioTrack: When paused, return cached playback position
         }
     }
+// QTI_END: 2014-03-06: Audio: AudioTrack: When paused, return cached playback position
 }
 
 status_t AudioTrack::setVolume(float left, float right)
@@ -1652,10 +1654,12 @@ status_t AudioTrack::getPosition(uint32_t *position)
         if (isOffloaded_l() && ((mState == STATE_PAUSED) || (mState == STATE_PAUSED_STOPPING))) {
             ALOGV("%s(%d): called in paused state, return cached position %u",
                 __func__, mPortId, mPausedPosition);
+// QTI_BEGIN: 2014-03-06: Audio: AudioTrack: When paused, return cached playback position
             *position = mPausedPosition;
             return NO_ERROR;
         }
 
+// QTI_END: 2014-03-06: Audio: AudioTrack: When paused, return cached playback position
         uint32_t dspFrames = 0;
         if (mOutput != AUDIO_IO_HANDLE_NONE) {
             uint32_t halFrames; // actually unused
@@ -1663,9 +1667,7 @@ status_t AudioTrack::getPosition(uint32_t *position)
             if (AudioSystem::getRenderPosition(mOutput, &halFrames, &dspFrames) != NO_ERROR) {
                 *position = 0;
                 return NO_ERROR;
-// QTI_BEGIN: 2018-03-22: Audio: add support for error handling of dsp SSR
             }
-// QTI_END: 2018-03-22: Audio: add support for error handling of dsp SSR
         }
         *position = dspFrames;
     } else {
@@ -1749,18 +1751,14 @@ status_t AudioTrack::setOutputDevice(audio_port_handle_t deviceId) {
         mSelectedDeviceId = deviceId;
         if (mStatus == NO_ERROR) {
             if (isOffloadedOrDirect_l()) {
-// QTI_BEGIN: 2024-04-30: Audio: av: Support restore track for offload/direct track
                 if (isPlaying_l()) {
-// QTI_END: 2024-04-30: Audio: av: Support restore track for offload/direct track
                     ALOGW("%s(%d). Offloaded or Direct track is not STOPPED or FLUSHED. "
                           "State: %s.",
                             __func__, mPortId, stateToString(mState));
                     result = INVALID_OPERATION;
-// QTI_BEGIN: 2024-04-30: Audio: av: Support restore track for offload/direct track
                 } else {
                     ALOGD("%s(%d): creating a new AudioTrack", __func__, mPortId);
                     result = restoreTrack_l("setOutputDevice", true /* forceRestore */);
-// QTI_END: 2024-04-30: Audio: av: Support restore track for offload/direct track
                 }
             } else {
                 // allow track invalidation when track is not playing to propagate
@@ -1877,8 +1875,10 @@ status_t AudioTrack::createTrack_l()
     }
 
     {
+// QTI_BEGIN: 2016-03-09: Audio: AudioTrack: Use original flags during track recreation
     // mFlags (not mOrigFlags) is modified depending on whether fast request is accepted.
     // After fast request is denied, we will request again if IAudioTrack is re-created.
+// QTI_END: 2016-03-09: Audio: AudioTrack: Use original flags during track recreation
     // Client can only express a preference for FAST.  Server will perform additional tests.
     if (mFlags & AUDIO_OUTPUT_FLAG_FAST) {
         // either of these use cases:
@@ -2969,8 +2969,10 @@ status_t AudioTrack::restoreTrack_l(const char *from, bool forceRestore)
     const uint32_t RETRY_DELAY_US = 150000;
     int retries = INITIAL_RETRIES;
 retry:
+// QTI_BEGIN: 2016-03-09: Audio: AudioTrack: Use original flags during track recreation
     mFlags = mOrigFlags;
 
+// QTI_END: 2016-03-09: Audio: AudioTrack: Use original flags during track recreation
     // If a new IAudioTrack is successfully created, createTrack_l() will modify the
     // following member variables: mAudioTrack, mCblkMemory and mCblk.
     // It will also delete the strong references on previous IAudioTrack and IMemory.
@@ -3274,9 +3276,7 @@ status_t AudioTrack::getTimestamp_l(AudioTimestamp& timestamp)
     // To avoid a race, read the presented frames first.  This ensures that presented <= consumed.
 
     status_t status;
-// QTI_BEGIN: 2024-04-23: Audio: av: Fix timestamp for direct flags
     if (isOffloadedOrDirect_l()) {
-// QTI_END: 2024-04-23: Audio: av: Fix timestamp for direct flags
         // use Binder to get timestamp
         media::AudioTimestampInternal ts;
         mAudioTrack->getTimestamp(&ts, &status);
@@ -3393,9 +3393,7 @@ status_t AudioTrack::getTimestamp_l(AudioTimestamp& timestamp)
         ALOGV_IF(status != WOULD_BLOCK, "%s(%d): getTimestamp error:%#x", __func__, mPortId, status);
         return status;
     }
-// QTI_BEGIN: 2024-04-23: Audio: av: Fix timestamp for direct flags
     if (isOffloadedOrDirect_l()) {
-// QTI_END: 2024-04-23: Audio: av: Fix timestamp for direct flags
         if (isOffloaded_l() && (mState == STATE_PAUSED || mState == STATE_PAUSED_STOPPING)) {
             // use cached paused position in case another offloaded track is running.
             timestamp.mPosition = mPausedPosition;

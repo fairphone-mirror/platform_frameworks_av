@@ -205,9 +205,7 @@ Component::Component(
         mDeathContext(nullptr) {
     // Retrieve supported parameters from store
     // TODO: We could cache this per component/interface type
-// QTI_BEGIN: 2024-09-05: Audio: Moving MultiAccessunitInterface to ComponentStore
     mMultiAccessUnitIntf = store->tryCreateMultiAccessUnitInterface(component->intf());
-// QTI_END: 2024-09-05: Audio: Moving MultiAccessunitInterface to ComponentStore
     mInterface = SharedRefBase::make<ComponentInterface>(
             component->intf(), mMultiAccessUnitIntf, store->getParameterCache());
     mInit = mInterface->status();

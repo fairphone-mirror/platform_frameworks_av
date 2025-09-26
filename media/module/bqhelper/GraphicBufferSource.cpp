@@ -816,9 +816,7 @@ bool GraphicBufferSource::calculateCodecTimestamp_l(
 
     if (mCaptureFps > 0.
             && (mFps > 2 * mCaptureFps
-// QTI_BEGIN: 2018-04-30: Video: libstagefright: Allow HFR-60 in HAL-3 recording
             || mCaptureFps > mFps)) {
-// QTI_END: 2018-04-30: Video: libstagefright: Allow HFR-60 in HAL-3 recording
         // Time lapse or slow motion mode
         if (mPrevCaptureUs < 0LL) {
             // first capture
@@ -1403,11 +1401,9 @@ status_t GraphicBufferSource::setTimeLapseConfig(double fps, double captureFps) 
     if (captureFps > fps) {
         mSnapTimestamps = 1 == base::GetIntProperty(
                 "debug.stagefright.snap_timestamps", int64_t(0));
-// QTI_BEGIN: 2020-04-30: Video: GraphicBufferSource: Enable timestamp snapping in timelapse mode
     } else if (fps > 2 * captureFps) {
         // Timelapse mode
         mSnapTimestamps = true;
-// QTI_END: 2020-04-30: Video: GraphicBufferSource: Enable timestamp snapping in timelapse mode
     } else {
         mSnapTimestamps = false;
     }

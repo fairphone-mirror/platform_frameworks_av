@@ -120,10 +120,8 @@ public:
     // TODO remove from here (split serialization)
     void dump(String8 *dst, int spaces) const;
 
-// QTI_BEGIN: 2018-03-23: Audio: Check if A2DP playback happens via primary output
     OutputProfileCollection mOutputProfiles; // output profiles exposed by this module
 
-// QTI_END: 2018-03-23: Audio: Check if A2DP playback happens via primary output
 private:
     void refreshSupportedDevices();
 

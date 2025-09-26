@@ -858,7 +858,8 @@ private:
                                     const sp<DeviceDescriptorBase>& device,
                                     uint32_t *latencyMs,
                                     audio_output_flags_t *flags,
-                                    audio_attributes_t attributes);
+                                    audio_attributes_t attributes,
+                                    int32_t mixPortHalId);
         // creates a special output that is duplicated to the two outputs passed as arguments. The duplication is performed by
         // a special mixer thread in the AudioFlinger.
         virtual audio_io_handle_t openDuplicateOutput(audio_io_handle_t output1, audio_io_handle_t output2);
@@ -881,7 +882,8 @@ private:
                                             audio_devices_t *devices,
                                             const String8& address,
                                             audio_source_t source,
-                                            audio_input_flags_t flags);
+                                            audio_input_flags_t flags,
+                                            int32_t mixPortHalId);
         // closes an audio input
         virtual status_t closeInput(audio_io_handle_t input);
         //

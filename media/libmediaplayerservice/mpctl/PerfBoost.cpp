@@ -1,4 +1,4 @@
-// QTI_BEGIN: 2023-06-21: Video: libmediaplayerservice: Enable perfboost during heif decode
+// QTI_BEGIN: 2023-06-21: Data: libmediaplayerservice: Enable perfboost during heif decode
 /*
  * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
@@ -88,11 +88,9 @@ HeifMPCtl::~HeifMPCtl() {
         }
 }
 
-// QTI_END: 2023-06-21: Video: libmediaplayerservice: Enable perfboost during heif decode
-// QTI_BEGIN: 2023-07-09: Video: libmediaplayerservice: fix uninitialized variable warning
+// QTI_END: 2023-06-21: Data: libmediaplayerservice: Enable perfboost during heif decode
 HeifPerfBoost::HeifPerfBoost(bool sync, int durationMs): mPerfLockHandle(0), mSync(sync) {
-// QTI_END: 2023-07-09: Video: libmediaplayerservice: fix uninitialized variable warning
-// QTI_BEGIN: 2023-06-21: Video: libmediaplayerservice: Enable perfboost during heif decode
+// QTI_BEGIN: 2023-06-21: Data: libmediaplayerservice: Enable perfboost during heif decode
         if (HeifMPCtl::getMPCtlLibInstance().mPerfHint) {
             ALOGV("Requesting %s for duration [%u] ms", __func__, durationMs);
             mPerfLockHandle = HeifMPCtl::getMPCtlLibInstance().mPerfHint(
@@ -124,5 +122,5 @@ HeifPerfBoost::~HeifPerfBoost() {
         }
 }
 
+// QTI_END: 2023-06-21: Data: libmediaplayerservice: Enable perfboost during heif decode
 } // namespace android
-// QTI_END: 2023-06-21: Video: libmediaplayerservice: Enable perfboost during heif decode

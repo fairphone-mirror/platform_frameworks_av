@@ -906,9 +906,11 @@ AudioSystem::AudioFlingerClient::getIoDescriptor_l(audio_io_handle_t ioHandle) {
 
 sp<AudioIoDescriptor> AudioSystem::AudioFlingerClient::getIoDescriptor(audio_io_handle_t ioHandle) {
     std::lock_guard _l(mMutex);
+// QTI_BEGIN: 2015-10-01: Audio: AudioSystem: Fix race condition in accessing ioDescriptors
     return getIoDescriptor_l(ioHandle);
 }
 
+// QTI_END: 2015-10-01: Audio: AudioSystem: Fix race condition in accessing ioDescriptors
 status_t AudioSystem::AudioFlingerClient::addAudioDeviceCallback(
         const wp<AudioDeviceCallback>& callback, audio_io_handle_t audioIo,
         audio_port_handle_t portId) {

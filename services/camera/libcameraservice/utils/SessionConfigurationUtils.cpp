@@ -281,9 +281,11 @@ bool is10bitCompatibleFormat(int32_t format, android_dataspace_t dataSpace) {
             } else if (dataSpace == static_cast<android_dataspace_t>(
                         ::aidl::android::hardware::graphics::common::Dataspace::HEIF_ULTRAHDR)) {
                 return true;
+// QTI_BEGIN: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
             } else if (dataSpace == static_cast<android_dataspace_t>(
                         ::aidl::android::hardware::graphics::common::Dataspace::HEIF)) {
                 return true;
+// QTI_END: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
             }
 
             return false;

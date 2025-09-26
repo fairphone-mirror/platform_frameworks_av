@@ -83,9 +83,7 @@ public:
     status_t setPreferredMicrophoneFieldDimension(float zoom) final;
     status_t shareAudioHistory(const std::string& sharedAudioPackageName,
             int64_t sharedAudioStartMs) final;
-// QTI_BEGIN: 2024-12-16: Audio: add setParameters support in IAudioRecord
     status_t setParameters(const String8& keyValuePairs) final;
-// QTI_END: 2024-12-16: Audio: add setParameters support in IAudioRecord
     int32_t startFrames() const final { return mStartFrames; }
 
     using SinkMetadatas = std::vector<record_track_metadata_v7_t>;

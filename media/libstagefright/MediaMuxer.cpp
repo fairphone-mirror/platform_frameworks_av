@@ -81,9 +81,7 @@ MediaMuxer::MediaMuxer(int fd, OutputFormat format)
     : mFormat(format),
       mState(UNINITIALIZED) {
     if (isMp4Format(format)) {
-// QTI_BEGIN: 2018-05-31: Video: libstagefirght: Add changes to handle multiple slices in writer
         mWriter = new MPEG4Writer(fd);
-// QTI_END: 2018-05-31: Video: libstagefirght: Add changes to handle multiple slices in writer
     } else if (format == OUTPUT_FORMAT_WEBM) {
         mWriter = new WebmWriter(fd);
     } else if (format == OUTPUT_FORMAT_OGG) {

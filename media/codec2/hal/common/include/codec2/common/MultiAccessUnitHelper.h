@@ -41,9 +41,7 @@ struct MultiAccessUnitInterface : public C2InterfaceHelper {
     bool isParamSupported(C2Param::Index index);
     C2LargeFrame::output getLargeFrameParam() const;
     C2Component::kind_t kind() const;
-// QTI_BEGIN: 2024-09-05: Audio: Moving MultiAccessunitInterface to ComponentStore
     bool isValidField(const C2ParamField &field) const;
-// QTI_END: 2024-09-05: Audio: Moving MultiAccessunitInterface to ComponentStore
 
 protected:
     bool getDecoderSampleRateAndChannelCount(
@@ -53,9 +51,7 @@ protected:
     std::shared_ptr<C2LargeFrame::output> mLargeFrameParams;
     C2ComponentKindSetting mKind;
     std::set<C2Param::Index> mSupportedParamIndexSet;
-// QTI_BEGIN: 2024-09-05: Audio: Moving MultiAccessunitInterface to ComponentStore
     std::vector<C2ParamField> mParamFields;
-// QTI_END: 2024-09-05: Audio: Moving MultiAccessunitInterface to ComponentStore
 
     friend struct MultiAccessUnitHelper;
 };

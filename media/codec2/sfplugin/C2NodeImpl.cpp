@@ -230,6 +230,44 @@ void C2NodeImpl::getInputBufferParams(IAidlNode::InputBufferParams *params) {
     // larger-than-4K scenario.
     {
         std::shared_ptr<Codec2Client::Component> comp = mComp.lock();
+
+        auto isLookaheadEncode = [comp] () {
+            std::vector<std::shared_ptr<C2ParamDescriptor>> paramDescriptors;
+            auto c2err = comp->querySupportedParams(&paramDescriptors);
+            if (c2err != C2_OK) {
+                ALOGE("getInputBufferParams: querySupportedParams failed %d", c2err);
+                return false;
+            }
+            uint32_t encModeIndex = 0;
+            std::string encModeString = "qti-ext-encoding-mode";
+            for (auto &pd: paramDescriptors) {
+                if (encModeString.find(pd->name()) != std::string::npos) {
+                    encModeIndex = pd->index();
+                    break;
+                }
+            }
+            if (encModeIndex == 0) {
+                return false;
+            }
+            std::vector<std::unique_ptr<C2Param>> queriedParams;
+            c2err = comp->query({}, {encModeIndex}, C2_DONT_BLOCK, &queriedParams);
+            if (c2err == C2_OK || c2err == C2_BAD_INDEX) {
+                for (auto &p : queriedParams) {
+                    if (p->index() == encModeIndex) {
+                        typedef C2StreamParam<C2Setting, C2SimpleValueStruct<uint32_t>,
+                                            kParamIndexDelay> C2VideoEncodingMode;
+                        const C2VideoEncodingMode *encMode =
+                                reinterpret_cast<const C2VideoEncodingMode *>(p.get());
+                        if (encMode->value & 4) {
+                            ALOGI("getInputBufferParams: LookaheadEncode enabled");
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+
         C2PortActualDelayTuning::input inputDelay(0);
         C2ActualPipelineDelayTuning pipelineDelay(0);
         c2_status_t c2err = C2_NOT_FOUND;
@@ -252,7 +290,7 @@ void C2NodeImpl::getInputBufferParams(IAidlNode::InputBufferParams *params) {
         } else {
             // overwrite component buffer count if it is more than
             // params->bufferCountActual (16) for 4k or lower resolutions
-            if (compBufferCountActual > params->bufferCountActual) {
+            if (isLookaheadEncode() && compBufferCountActual > params->bufferCountActual) {
                 params->bufferCountActual = compBufferCountActual;
             }
         }

@@ -120,7 +120,9 @@ HeicCompositeStream::~HeicCompositeStream() {
     mMainImageSurfaceId = -1;
     mMainImageConsumer.clear();
     mMainImageSurface.clear();
+// QTI_BEGIN: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     mDynamicProfileHLG10 = false;
+// QTI_END: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
 }
 
 bool HeicCompositeStream::isHeicCompositeStreamInfo(const OutputStreamInfo& streamInfo,
@@ -165,10 +167,10 @@ status_t HeicCompositeStream::createInternalStreams(const std::vector<SurfaceHol
         camera_stream_rotation_t rotation, int *id, const std::string& physicalCameraId,
         const std::unordered_set<int32_t> &sensorPixelModesUsed,
         std::vector<int> *surfaceIds,
-// QTI_BEGIN: 2023-05-09: Camera: Propagate colorspace to heic composite stream
         int /*streamSetId*/, bool /*isShared*/, int32_t colorSpace,
-// QTI_END: 2023-05-09: Camera: Propagate colorspace to heic composite stream
+// QTI_BEGIN: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
         int64_t dynamicProfile, int64_t /*streamUseCase*/, bool useReadoutTimestamp) {
+// QTI_END: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
 
     sp<CameraDeviceBase> device = mDevice.promote();
     if (!device.get()) {
@@ -189,10 +191,12 @@ status_t HeicCompositeStream::createInternalStreams(const std::vector<SurfaceHol
         mInternalDataSpace = static_cast<android_dataspace_t>(HAL_DATASPACE_BT2020_HLG);
     }
 
+// QTI_BEGIN: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     if (dynamicProfile == ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_HLG10) {
         mDynamicProfileHLG10 = true;
     }
 
+// QTI_END: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     res = initializeCodec(width, height, device);
     if (res != OK) {
         ALOGE("%s: Failed to initialize HEIC/HEVC codec: %s (%d)",
@@ -264,29 +268,43 @@ status_t HeicCompositeStream::createInternalStreams(const std::vector<SurfaceHol
     }
 
     //Use YUV_420 format if framework tiling is needed.
+// QTI_BEGIN: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     int srcStreamFmt = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
 
-    if ((TRUE == mHDRGainmapEnabled) || (TRUE == mDynamicProfileHLG10))
+// QTI_END: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
+// QTI_BEGIN: 2025-06-23: Camera: Enable IMPL_DEF with HLG10 for HEIC format
+    if (TRUE == mHDRGainmapEnabled)
+// QTI_END: 2025-06-23: Camera: Enable IMPL_DEF with HLG10 for HEIC format
+// QTI_BEGIN: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     {
         srcStreamFmt = static_cast<android_pixel_format_t>(HAL_PIXEL_FORMAT_YCBCR_P010);
     }
+// QTI_END: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
+// QTI_BEGIN: 2025-06-23: Camera: Enable IMPL_DEF with HLG10 for HEIC format
+    else if (TRUE == mDynamicProfileHLG10)
+    {
+        srcStreamFmt = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
+    }
+// QTI_END: 2025-06-23: Camera: Enable IMPL_DEF with HLG10 for HEIC format
+// QTI_BEGIN: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     else if (TRUE == mUseGrid)
     {
         srcStreamFmt = HAL_PIXEL_FORMAT_YCbCr_420_888;
     }
 
+// QTI_END: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     res = device->createStream(mMainImageSurface, width, height, srcStreamFmt, mInternalDataSpace,
             rotation, id, physicalCameraId, sensorPixelModesUsed, surfaceIds,
             camera3::CAMERA3_STREAM_SET_ID_INVALID, /*isShared*/false, /*isMultiResolution*/false,
+// QTI_BEGIN: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
             /*consumerUsage*/0, (mHDRGainmapEnabled || mDynamicProfileHLG10) ?
+// QTI_END: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
             ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_HLG10 :
             ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD,
             ANDROID_SCALER_AVAILABLE_STREAM_USE_CASES_DEFAULT,
             OutputConfiguration::TIMESTAMP_BASE_DEFAULT,
             OutputConfiguration::MIRROR_MODE_AUTO,
-// QTI_BEGIN: 2023-05-09: Camera: Propagate colorspace to heic composite stream
             colorSpace,
-// QTI_END: 2023-05-09: Camera: Propagate colorspace to heic composite stream
             useReadoutTimestamp);
     if (res == OK) {
         mMainImageSurfaceId = (*surfaceIds)[0];
@@ -1105,6 +1123,7 @@ status_t HeicCompositeStream::processInputFrame(int64_t frameNumber,
     bool hasOutputBuffer = inputFrame.muxer != nullptr ||
             (mDequeuedOutputBufferCnt < kMaxOutputSurfaceProducerCount);
     bool hasGainmapMetadata = !inputFrame.isoGainmapMetadata.empty();
+    bool hdrGainmapFormatReady = mHDRGainmapEnabled ? (mGainmapFormat != nullptr) : true;
 
     ALOGV("%s: [%" PRId64 "]: appSegmentReady %d, codecOutputReady %d, codecInputReady %d,"
             " dequeuedOutputBuffer %d, timestamp %" PRId64, __FUNCTION__, frameNumber,
@@ -1137,6 +1156,13 @@ status_t HeicCompositeStream::processInputFrame(int64_t frameNumber,
                     strerror(-res), res);
             return res;
         }
+    }
+
+    if (!hdrGainmapFormatReady) {
+        // If HDR gainmap is enabled, we need to wait until the gainmap format
+        // is received from the codec before starting the muxer. Otherwise,
+        // the muxer will be able to add the gainmap track.
+        return OK;
     }
 
     if (!(codecOutputReady && hasOutputBuffer) && !appSegmentReady) {
@@ -1916,9 +1942,9 @@ status_t HeicCompositeStream::initializeCodec(uint32_t width, uint32_t height,
 
     bool useGrid = false;
     AString hevcName;
-// QTI_BEGIN: 2023-06-06: Video: libcameraservice: Use BlockModel only for surface input
+// QTI_BEGIN: 2023-06-06: Camera: libcameraservice: Use BlockModel only for surface input
     bool isHWEncWithoutGrid = false;
-// QTI_END: 2023-06-06: Video: libcameraservice: Use BlockModel only for surface input
+// QTI_END: 2023-06-06: Camera: libcameraservice: Use BlockModel only for surface input
     bool isSizeSupported = isSizeSupportedByHeifEncoder(width, height,
             &mUseHeic, &useGrid, nullptr, &hevcName);
     if (!isSizeSupported) {
@@ -2019,34 +2045,36 @@ status_t HeicCompositeStream::initializeCodec(uint32_t width, uint32_t height,
     outputFormat->setInt32(KEY_I_FRAME_INTERVAL, 0);
     outputFormat->setInt32(KEY_COLOR_FORMAT,
             useGrid || mHDRGainmapEnabled ? COLOR_FormatYUV420Flexible : COLOR_FormatSurface);
+// QTI_BEGIN: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     if (mDynamicProfileHLG10) {
         outputFormat->setInt32(KEY_PROFILE, HEVCProfileMain10Still);
         outputFormat->setInt32(KEY_COLOR_FORMAT, COLOR_FormatYUVP010);
         ALOGV("%s KEY_PROFILE: HEVCProfileMain10Still, KEY_COLOR_FORMAT: COLOR_FormatYUVP010", __FUNCTION__);
     }
+// QTI_END: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     outputFormat->setInt32(KEY_FRAME_RATE, useGrid ? gridRows * gridCols : kNoGridOpRate);
     // This only serves as a hint to encoder when encoding is not real-time.
     outputFormat->setInt32(KEY_OPERATING_RATE, useGrid ? kGridOpRate : kNoGridOpRate);
 
-// QTI_BEGIN: 2023-06-06: Video: libcameraservice: Use BlockModel only for surface input
+// QTI_BEGIN: 2023-06-06: Camera: libcameraservice: Use BlockModel only for surface input
     // BLOCK_MODEL is enabled only for HW encoder with surface input. Surface mode is used only
     // when grid is not used.
-// QTI_END: 2023-06-06: Video: libcameraservice: Use BlockModel only for surface input
-// QTI_BEGIN: 2023-02-15: Core: libcameraservice: Configure camcorder HEIC encoder session with
+// QTI_END: 2023-06-06: Camera: libcameraservice: Use BlockModel only for surface input
+// QTI_BEGIN: 2023-02-15: Camera: libcameraservice: Configure camcorder HEIC encoder session with
     mCodec->getName(&hevcName);
-// QTI_END: 2023-02-15: Core: libcameraservice: Configure camcorder HEIC encoder session with
-// QTI_BEGIN: 2023-06-06: Video: libcameraservice: Use BlockModel only for surface input
+// QTI_END: 2023-02-15: Camera: libcameraservice: Configure camcorder HEIC encoder session with
+// QTI_BEGIN: 2023-06-06: Camera: libcameraservice: Use BlockModel only for surface input
     isHWEncWithoutGrid = hevcName.startsWith("c2.qti.heic.encoder") && !useGrid;
-// QTI_END: 2023-06-06: Video: libcameraservice: Use BlockModel only for surface input
+// QTI_END: 2023-06-06: Camera: libcameraservice: Use BlockModel only for surface input
 
     res = mCodec->configure(outputFormat, nullptr /*nativeWindow*/,
-// QTI_BEGIN: 2023-02-15: Core: libcameraservice: Configure camcorder HEIC encoder session with
+// QTI_BEGIN: 2023-02-15: Camera: libcameraservice: Configure camcorder HEIC encoder session with
             nullptr /*crypto*/,
             CONFIGURE_FLAG_ENCODE |
-// QTI_END: 2023-02-15: Core: libcameraservice: Configure camcorder HEIC encoder session with
-// QTI_BEGIN: 2023-06-06: Video: libcameraservice: Use BlockModel only for surface input
+// QTI_END: 2023-02-15: Camera: libcameraservice: Configure camcorder HEIC encoder session with
+// QTI_BEGIN: 2023-06-06: Camera: libcameraservice: Use BlockModel only for surface input
             (isHWEncWithoutGrid ? CONFIGURE_FLAG_USE_BLOCK_MODEL : 0));
-// QTI_END: 2023-06-06: Video: libcameraservice: Use BlockModel only for surface input
+// QTI_END: 2023-06-06: Camera: libcameraservice: Use BlockModel only for surface input
     if (res != OK) {
         ALOGE("%s: Failed to configure codec: %s (%d)", __FUNCTION__,
                 strerror(-res), res);

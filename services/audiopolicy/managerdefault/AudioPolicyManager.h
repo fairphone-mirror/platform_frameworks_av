@@ -1083,9 +1083,7 @@ private:
         void chkDpConnAndAllowedForVoice(audio_devices_t device, audio_policy_dev_state_t state);
 // QTI_END: 2021-02-23: Audio: audiopolicy: Add support for voice for DP.
 
-// QTI_BEGIN: 2018-02-19: Audio: audiopolicy: make audio policy extensible
 protected:
-// QTI_END: 2018-02-19: Audio: audiopolicy: make audio policy extensible
         // Add or remove AC3 DTS encodings based on user preferences.
         void modifySurroundFormats(const sp<DeviceDescriptor>& devDesc, FormatVector *formatsPtr);
         void modifySurroundChannelMasks(ChannelMaskSet *channelMasksPtr);

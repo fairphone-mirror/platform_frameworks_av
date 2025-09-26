@@ -2817,9 +2817,7 @@ public:
     binder::Status setPreferredMicrophoneFieldDimension(float zoom) final;
     binder::Status shareAudioHistory(
             const std::string& sharedAudioPackageName, int64_t sharedAudioStartMs) final;
-// QTI_BEGIN: 2024-12-16: Audio: add setParameters support in IAudioRecord
     binder::Status setParameters(const ::std::string& keyValuePairs) final;
-// QTI_END: 2024-12-16: Audio: add setParameters support in IAudioRecord
 
 private:
     const sp<IAfRecordTrack> mRecordTrack;
@@ -2889,13 +2887,11 @@ binder::Status RecordHandle::shareAudioHistory(
             mRecordTrack->shareAudioHistory(sharedAudioPackageName, sharedAudioStartMs));
 }
 
-// QTI_BEGIN: 2024-12-16: Audio: add setParameters support in IAudioRecord
 binder::Status RecordHandle::setParameters(const ::std::string& keyValuePairs) {
     return binderStatusFromStatusT(mRecordTrack->setParameters(
             String8(keyValuePairs.c_str())));
 }
 
-// QTI_END: 2024-12-16: Audio: add setParameters support in IAudioRecord
 // ----------------------------------------------------------------------------
 #undef LOG_TAG
 #define LOG_TAG "AF::RecordTrack"
@@ -3313,7 +3309,6 @@ status_t RecordTrack::shareAudioHistory(
     }
 }
 
-// QTI_BEGIN: 2024-12-16: Audio: add setParameters support in IAudioRecord
 status_t RecordTrack::setParameters(const String8& keyValuePairs) {
     const sp<IAfThreadBase> thread = mThread.promote();
     if (thread == nullptr) {
@@ -3326,7 +3321,6 @@ status_t RecordTrack::setParameters(const String8& keyValuePairs) {
     }
 }
 
-// QTI_END: 2024-12-16: Audio: add setParameters support in IAudioRecord
 void RecordTrack::copyMetadataTo(MetadataInserter& backInserter) const
 {
 

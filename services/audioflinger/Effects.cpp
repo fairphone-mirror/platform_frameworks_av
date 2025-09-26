@@ -341,11 +341,9 @@ ssize_t EffectBase::removeHandle_l(IAfEffectHandle *handle)
         }
     }
 
-// QTI_BEGIN: 2020-08-17: Audio: audioflinger: Remove effect from hal before closing.
     // Prevent calls to process() and other functions on effect interface from now on.
     // The effect engine will be released by the destructor when the last strong reference on
     // this object is released which can happen after next process is called.
-// QTI_END: 2020-08-17: Audio: audioflinger: Remove effect from hal before closing.
     if (mHandles.size() == 0 && !mPinned) {
         mState = DESTROYED;
     }

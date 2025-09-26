@@ -260,7 +260,8 @@ status_t DeviceHalHidl::openOutputStream(
         struct audio_config *config,
         const char *address,
         sp<StreamOutHalInterface> *outStream,
-        const std::vector<playback_track_metadata_v7_t>& sourceMetadata) {
+        const std::vector<playback_track_metadata_v7_t>& sourceMetadata,
+        int32_t /* mixPortHalId */) {
     TIME_CHECK();
     if (mDevice == 0) return NO_INIT;
     DeviceAddress hidlDevice;
@@ -332,7 +333,8 @@ status_t DeviceHalHidl::openInputStream(
         audio_source_t source,
         audio_devices_t outputDevice,
         const char *outputDeviceAddress,
-        sp<StreamInHalInterface> *inStream) {
+        sp<StreamInHalInterface> *inStream,
+        int32_t /*mixPortHalId*/) {
     TIME_CHECK();
     if (mDevice == 0) return NO_INIT;
     DeviceAddress hidlDevice;

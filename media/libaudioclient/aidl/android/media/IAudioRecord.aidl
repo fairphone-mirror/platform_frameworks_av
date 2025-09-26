@@ -50,9 +50,7 @@ interface IAudioRecord {
   void setPreferredMicrophoneFieldDimension(float zoom);
 
   void shareAudioHistory(@utf8InCpp String sharedAudioPackageName, long sharedAudioStartMs);
-// QTI_BEGIN: 2024-12-16: Audio: add setParameters support in IAudioRecord
 
   /** Send parameters to the audio hardware. */
   void setParameters(@utf8InCpp String keyValuePairs);
-// QTI_END: 2024-12-16: Audio: add setParameters support in IAudioRecord
 }

@@ -36,9 +36,9 @@
 #include <media/IAudioFlinger.h>
 #include <media/MediaMetricsItem.h>
 #include <media/TypeConverter.h>
-// QTI_BEGIN: 2018-04-05: Secure Systems: SEEMP: add framework instrumentation
+// QTI_BEGIN: 2018-04-05: Audio: SEEMP: add framework instrumentation
 #include <media/SeempLog.h>
-// QTI_END: 2018-04-05: Secure Systems: SEEMP: add framework instrumentation
+// QTI_END: 2018-04-05: Audio: SEEMP: add framework instrumentation
 
 #define WAIT_PERIOD_MS          10
 
@@ -458,9 +458,9 @@ status_t AudioRecord::start(AudioSystem::sync_event_t event, audio_session_t tri
 {
     const int64_t beginNs = systemTime();
     ALOGV("%s(%d): sync event %d trigger session %d", __func__, mPortId, event, triggerSession);
-// QTI_BEGIN: 2018-04-05: Secure Systems: SEEMP: add framework instrumentation
+// QTI_BEGIN: 2018-04-05: Audio: SEEMP: add framework instrumentation
     SEEMPLOG_RECORD(71,"");
-// QTI_END: 2018-04-05: Secure Systems: SEEMP: add framework instrumentation
+// QTI_END: 2018-04-05: Audio: SEEMP: add framework instrumentation
     AutoMutex lock(mLock);
 
     status_t status = NO_ERROR;
@@ -1278,29 +1278,21 @@ audio_io_handle_t AudioRecord::getInputPrivate() const
     return mInput;
 }
 
-// QTI_BEGIN: 2022-10-19: Audio: AudioRecord: add set/get Parameters API's
 status_t AudioRecord::setParameters(const String8& keyValuePairs) {
     AutoMutex lock(mLock);
-// QTI_END: 2022-10-19: Audio: AudioRecord: add set/get Parameters API's
-// QTI_BEGIN: 2024-12-16: Audio: AudioRecord: add set/get Parameters API's
     if (mInput == AUDIO_IO_HANDLE_NONE || mAudioRecord == nullptr) {
         return NO_INIT;
     }
     return statusTFromBinderStatus(mAudioRecord->setParameters(keyValuePairs.c_str()));
-// QTI_END: 2024-12-16: Audio: AudioRecord: add set/get Parameters API's
-// QTI_BEGIN: 2022-10-19: Audio: AudioRecord: add set/get Parameters API's
 }
 
 String8 AudioRecord::getParameters(const String8& keys) {
     AutoMutex lock(mLock);
     return mInput != AUDIO_IO_HANDLE_NONE
                ? AudioSystem::getParameters(mInput, keys)
-// QTI_END: 2022-10-19: Audio: AudioRecord: add set/get Parameters API's
                : String8();
-// QTI_BEGIN: 2022-10-19: Audio: AudioRecord: add set/get Parameters API's
 }
 
-// QTI_END: 2022-10-19: Audio: AudioRecord: add set/get Parameters API's
 // -------------------------------------------------------------------------
 
 ssize_t AudioRecord::read(void* buffer, size_t userSize, bool blocking)

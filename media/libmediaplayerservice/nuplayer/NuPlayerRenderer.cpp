@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-// QTI_BEGIN: 2022-08-16: Video: Revert "Dynamic Video Framework Log Enablement"
 //#define LOG_NDEBUG 0
-// QTI_END: 2022-08-16: Video: Revert "Dynamic Video Framework Log Enablement"
 #define ATRACE_TAG ATRACE_TAG_AUDIO
 #define LOG_TAG "NuPlayerRenderer"
 #include <utils/Log.h>
@@ -129,9 +127,7 @@ NuPlayer::Renderer::Renderer(
       mAudioEOSGeneration(0),
       mMediaClock(mediaClock),
       mPlaybackSettings(AUDIO_PLAYBACK_RATE_DEFAULT),
-// QTI_BEGIN: 2024-11-28: Audio: libmediaplayerservice: NuPlayer: playback: fix anchor time
       mLastAudioAnchorNowUs(-1),
-// QTI_END: 2024-11-28: Audio: libmediaplayerservice: NuPlayer: playback: fix anchor time
       mAudioFirstAnchorTimeMediaUs(-1),
       mAudioAnchorTimeMediaUs(-1),
       mAnchorTimeMediaUs(-1),
@@ -145,9 +141,7 @@ NuPlayer::Renderer::Renderer(
       mSyncQueues(false),
       mPaused(false),
       mPauseDrainAudioAllowedUs(0),
-// QTI_BEGIN: 2022-09-23: Video: NuPlayer: control preroll more precisely
       mVideoPrerollInprogress(false),
-// QTI_END: 2022-09-23: Video: NuPlayer: control preroll more precisely
       mVideoSampleReceived(false),
       mVideoRenderingStarted(false),
       mVideoRenderingStartGeneration(0),
@@ -162,18 +156,10 @@ NuPlayer::Renderer::Renderer(
       mTotalBuffersQueued(0),
       mLastAudioBufferDrained(0),
       mUseAudioCallback(false),
-// QTI_BEGIN: 2018-09-18: Video: NuPlayerRenderer: video should clear and update anchor at the same time
       mWakeLock(new AWakeLock()),
-// QTI_END: 2018-09-18: Video: NuPlayerRenderer: video should clear and update anchor at the same time
-// QTI_BEGIN: 2020-11-16: Video: NuPlayer: enable seek preroll
       mNeedVideoClearAnchor(false),
-// QTI_END: 2020-11-16: Video: NuPlayer: enable seek preroll
-// QTI_BEGIN: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
       mIsSeekonPause(false),
-// QTI_END: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
-// QTI_BEGIN: 2020-11-23: Video: Nuplayer: Use video render rate from video decoder
       mVideoRenderFps(0.0f) {
-// QTI_END: 2020-11-23: Video: Nuplayer: Use video render rate from video decoder
     CHECK(mediaClock != NULL);
     mPlaybackRate = mPlaybackSettings.mSpeed;
     mMediaClock->setPlaybackRate(mPlaybackRate);
@@ -251,15 +237,9 @@ status_t NuPlayer::Renderer::onConfigPlayback(const AudioPlaybackRate &rate /* s
         }
     }
 
-// QTI_BEGIN: 2018-10-22: Video: NuPlayerRenderer: ensure using video ts as anchor when really has no
     if (!mHasAudio && mHasVideo) {
-// QTI_END: 2018-10-22: Video: NuPlayerRenderer: ensure using video ts as anchor when really has no
-// QTI_BEGIN: 2018-09-18: Video: NuPlayerRenderer: video should clear and update anchor at the same time
         mNeedVideoClearAnchor = true;
-// QTI_END: 2018-09-18: Video: NuPlayerRenderer: video should clear and update anchor at the same time
-// QTI_BEGIN: 2018-05-15: Video: nuplayer: Fix playback speed issue of video only clips
     }
-// QTI_END: 2018-05-15: Video: nuplayer: Fix playback speed issue of video only clips
     mPlaybackSettings = rate;
     mPlaybackRate = rate.mSpeed;
     mMediaClock->setPlaybackRate(mPlaybackRate);
@@ -391,12 +371,10 @@ void NuPlayer::Renderer::signalEnableOffloadAudio() {
     (new AMessage(kWhatEnableOffloadAudio, this))->post();
 }
 
-// QTI_BEGIN: 2022-09-23: Video: NuPlayer: control preroll more precisely
 void NuPlayer::Renderer::pause(bool forPreroll) {
     sp<AMessage> msg = new AMessage(kWhatPause, this);
     msg->setInt32("pause-for-preroll", forPreroll);
     msg->post();
-// QTI_END: 2022-09-23: Video: NuPlayer: control preroll more precisely
 }
 
 void NuPlayer::Renderer::resume() {
@@ -643,13 +621,11 @@ void NuPlayer::Renderer::onMessageReceived(const sp<AMessage> &msg) {
 
             if (onDrainAudioQueue()) {
                 uint32_t numFramesPlayed;
-// QTI_BEGIN: 2018-03-22: Audio: add support for error handling of dsp SSR
                 if (mAudioSink->getPosition(&numFramesPlayed) != OK) {
                     ALOGE("Error in time stamp query, return from here.\
                              Fillbuffer is called as part of session recreation");
                     break;
                 }
-// QTI_END: 2018-03-22: Audio: add support for error handling of dsp SSR
                 // Handle AudioTrack race when start is immediately called after flush.
                 uint32_t numFramesPendingPlayout =
                     (mNumFramesWritten > numFramesPlayed ?
@@ -686,14 +662,9 @@ void NuPlayer::Renderer::onMessageReceived(const sp<AMessage> &msg) {
                 break;
             }
 
-// QTI_BEGIN: 2020-11-01: Video: NuPlayer: fix some side effects of preroll
             int64_t mediaTimeUs = -1;
             if (mAnchorTimeMediaUs < 0 && msg->findInt64("mediaTimeUs", &mediaTimeUs)
-// QTI_END: 2020-11-01: Video: NuPlayer: fix some side effects of preroll
-// QTI_BEGIN: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
                     && mediaTimeUs != -1 && (offloadingAudio() || !mIsSeekonPause)) {
-// QTI_END: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
-// QTI_BEGIN: 2020-11-01: Video: NuPlayer: fix some side effects of preroll
                 ALOGI("NOTE: audio still doesn't update anchor yet after wait, video has to update "
                         "anchor and start rendering");
                 int64_t nowUs = ALooper::GetNowUs();
@@ -702,11 +673,8 @@ void NuPlayer::Renderer::onMessageReceived(const sp<AMessage> &msg) {
                 mAnchorTimeMediaUs = mediaTimeUs;
             }
 
-// QTI_END: 2020-11-01: Video: NuPlayer: fix some side effects of preroll
-// QTI_BEGIN: 2024-11-28: Audio: libmediaplayerservice: NuPlayer: playback: fix anchor time
             forceAudioUpdateAnchorTime();
 
-// QTI_END: 2024-11-28: Audio: libmediaplayerservice: NuPlayer: playback: fix anchor time
             mDrainVideoQueuePending = false;
 
             onDrainVideoQueue();
@@ -833,11 +801,9 @@ void NuPlayer::Renderer::onMessageReceived(const sp<AMessage> &msg) {
 
         case kWhatPause:
         {
-// QTI_BEGIN: 2022-09-23: Video: NuPlayer: control preroll more precisely
             int32_t pauseForPreroll;
             CHECK(msg->findInt32("pause-for-preroll", &pauseForPreroll));
             onPause(pauseForPreroll);
-// QTI_END: 2022-09-23: Video: NuPlayer: control preroll more precisely
             break;
         }
 
@@ -1059,7 +1025,6 @@ size_t NuPlayer::Renderer::fillAudioBuffer(void *buffer, size_t size) {
 
     if (mAudioFirstAnchorTimeMediaUs >= 0) {
         int64_t nowUs = ALooper::GetNowUs();
-// QTI_BEGIN: 2018-03-22: Audio: add support for error handling of dsp SSR
         int64_t nowMediaUs = -1;
         int64_t playedDuration = mAudioSink->getPlayedOutDurationUs(nowUs);
         if (playedDuration >= 0) {
@@ -1067,15 +1032,10 @@ size_t NuPlayer::Renderer::fillAudioBuffer(void *buffer, size_t size) {
         } else {
             mMediaClock->getMediaTime(nowUs, &nowMediaUs);
         }
-// QTI_END: 2018-03-22: Audio: add support for error handling of dsp SSR
         // we don't know how much data we are queueing for offloaded tracks.
         mMediaClock->updateAnchor(nowMediaUs, nowUs, INT64_MAX);
-// QTI_BEGIN: 2018-03-22: Audio: add support for error handling of dsp SSR
         mAnchorTimeMediaUs = nowMediaUs;
-// QTI_END: 2018-03-22: Audio: add support for error handling of dsp SSR
-// QTI_BEGIN: 2024-11-28: Audio: libmediaplayerservice: NuPlayer: playback: fix anchor time
         mLastAudioAnchorNowUs = nowUs;
-// QTI_END: 2024-11-28: Audio: libmediaplayerservice: NuPlayer: playback: fix anchor time
     }
 
     // for non-offloaded audio, we need to compute the frames written because
@@ -1374,12 +1334,8 @@ void NuPlayer::Renderer::onNewAudioMediaTime(int64_t mediaTimeUs) {
         if (nowUs >= mNextAudioClockUpdateTimeUs) {
             int64_t nowMediaUs = mediaTimeUs - getPendingAudioPlayoutDurationUs(nowUs);
             mMediaClock->updateAnchor(nowMediaUs, nowUs, mediaTimeUs);
-// QTI_BEGIN: 2018-11-29: Video: nuplayer: update anchorTime only with updateAnchor for audio
             mAnchorTimeMediaUs = mediaTimeUs;
-// QTI_END: 2018-11-29: Video: nuplayer: update anchorTime only with updateAnchor for audio
-// QTI_BEGIN: 2019-10-21: Video: NuPlayer: fix av sync issue due to maxTimeMedia
             mAnchorNumFramesWritten = mNumFramesWritten;
-// QTI_END: 2019-10-21: Video: NuPlayer: fix av sync issue due to maxTimeMedia
             mUseVirtualAudioSink = false;
             mNextAudioClockUpdateTimeUs = nowUs + kMinimumAudioClockUpdatePeriodUs;
         }
@@ -1397,12 +1353,8 @@ void NuPlayer::Renderer::onNewAudioMediaTime(int64_t mediaTimeUs) {
             // and it's paced by system clock.
             ALOGW("AudioSink stuck. ARE YOU CONNECTED TO AUDIO OUT? Switching to system clock.");
             mMediaClock->updateAnchor(mAudioFirstAnchorTimeMediaUs, nowUs, mediaTimeUs);
-// QTI_BEGIN: 2018-11-29: Video: nuplayer: update anchorTime only with updateAnchor for audio
             mAnchorTimeMediaUs = mediaTimeUs;
-// QTI_END: 2018-11-29: Video: nuplayer: update anchorTime only with updateAnchor for audio
-// QTI_BEGIN: 2019-10-21: Video: NuPlayer: fix av sync issue due to maxTimeMedia
             mAnchorNumFramesWritten = mNumFramesWritten;
-// QTI_END: 2019-10-21: Video: NuPlayer: fix av sync issue due to maxTimeMedia
             mUseVirtualAudioSink = true;
         }
     }
@@ -1413,9 +1365,7 @@ void NuPlayer::Renderer::onNewAudioMediaTime(int64_t mediaTimeUs) {
 void NuPlayer::Renderer::postDrainVideoQueue() {
     if (mDrainVideoQueuePending
             || getSyncQueues()
-// QTI_BEGIN: 2022-09-23: Video: NuPlayer: control preroll more precisely
             || (mPaused && mVideoSampleReceived && !mVideoPrerollInprogress)) {
-// QTI_END: 2022-09-23: Video: NuPlayer: control preroll more precisely
         return;
     }
 
@@ -1435,26 +1385,16 @@ void NuPlayer::Renderer::postDrainVideoQueue() {
         return;
     }
 
-// QTI_BEGIN: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
     // notify preroll completed immediately when we are ready to post msg to drain video buf, so that
     // NuPlayer could wake up renderer early to resume AudioSink since audio sink resume has latency
-// QTI_END: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
-// QTI_BEGIN: 2022-09-23: Video: NuPlayer: control preroll more precisely
     if (mVideoPrerollInprogress) {
-// QTI_END: 2022-09-23: Video: NuPlayer: control preroll more precisely
-// QTI_BEGIN: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
         sp<AMessage> notify = mNotify->dup();
         notify->setInt32("what", kWhatVideoPrerollComplete);
         ALOGI("NOTE: notifying video preroll complete");
         notify->post();
-// QTI_END: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
-// QTI_BEGIN: 2022-09-23: Video: NuPlayer: control preroll more precisely
         mVideoPrerollInprogress = false;
-// QTI_END: 2022-09-23: Video: NuPlayer: control preroll more precisely
-// QTI_BEGIN: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
     }
 
-// QTI_END: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
     int64_t nowUs = ALooper::GetNowUs();
     if (mFlags & FLAG_REAL_TIME) {
         int64_t realTimeUs;
@@ -1479,58 +1419,34 @@ void NuPlayer::Renderer::postDrainVideoQueue() {
 
     {
         Mutex::Autolock autoLock(mLock);
-// QTI_BEGIN: 2018-10-22: Video: NuPlayerRenderer: ensure using video ts as anchor when really has no
         if (mNeedVideoClearAnchor && !mHasAudio) {
-// QTI_END: 2018-10-22: Video: NuPlayerRenderer: ensure using video ts as anchor when really has no
-// QTI_BEGIN: 2018-09-18: Video: NuPlayerRenderer: video should clear and update anchor at the same time
             mNeedVideoClearAnchor = false;
             clearAnchorTime();
         }
-// QTI_END: 2018-09-18: Video: NuPlayerRenderer: video should clear and update anchor at the same time
         if (mAnchorTimeMediaUs < 0) {
-// QTI_BEGIN: 2020-11-01: Video: NuPlayer: fix some side effects of preroll
             if (mPaused && !mVideoSampleReceived && mHasAudio) {
-// QTI_END: 2020-11-01: Video: NuPlayer: fix some side effects of preroll
-// QTI_BEGIN: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
                 mDrainVideoQueuePending = true;
                 AudioTimestamp ts;
-// QTI_END: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
-// QTI_BEGIN: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
                 if (!offloadingAudio() && mIsSeekonPause
                        && mAudioSink->getTimestamp(ts) == WOULD_BLOCK) {
-// QTI_END: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
-// QTI_BEGIN: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
                     msg->post();
                     return;
                 }
-// QTI_END: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
-// QTI_BEGIN: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
                 // this is the first video buffer to be drained, and we know there is audio track
                 // exist. sicne audio start has inevitable latency, we wait audio for a while, give
                 // audio a chance to update anchor time. video doesn't update anchor this time to
                 // alleviate a/v sync issue
                 auto audioStartLatency = 1000 * (mAudioSink->latency()
                                 - (1000 * mAudioSink->frameCount() / mAudioSink->getSampleRate()));
-// QTI_END: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
-// QTI_BEGIN: 2020-11-01: Video: NuPlayer: fix some side effects of preroll
                 ALOGI("NOTE: First video buffer, wait audio for a while due to audio start latency(%zuus)",
-// QTI_END: 2020-11-01: Video: NuPlayer: fix some side effects of preroll
-// QTI_BEGIN: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
                         audioStartLatency);
-// QTI_END: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
-// QTI_BEGIN: 2020-11-01: Video: NuPlayer: fix some side effects of preroll
                 // use first buffer ts to update anchor
                 msg->setInt64("mediaTimeUs", mediaTimeUs);
-// QTI_END: 2020-11-01: Video: NuPlayer: fix some side effects of preroll
-// QTI_BEGIN: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
                 msg->post(audioStartLatency);
                 return;
             }
-// QTI_END: 2020-08-10: Video: mediaplayerservice: alleviate a/v sync issue at starting
-// QTI_BEGIN: 2020-02-05: Video: NuPlayer: Fix seek stuck issue in video-only clips
             mMediaClock->updateAnchor(mediaTimeUs, nowUs,
                 (mHasAudio ? -1 : mediaTimeUs + kDefaultVideoFrameIntervalUs));
-// QTI_END: 2020-02-05: Video: NuPlayer: Fix seek stuck issue in video-only clips
             mAnchorTimeMediaUs = mediaTimeUs;
         }
     }
@@ -1540,27 +1456,20 @@ void NuPlayer::Renderer::postDrainVideoQueue() {
         mMediaClock->updateMaxTimeMedia(mediaTimeUs + kDefaultVideoFrameIntervalUs);
     }
 
-// QTI_BEGIN: 2018-12-06: Video: NuPlayerRenderer: drain video queue without delay when video is late
     if (!mVideoSampleReceived || mediaTimeUs < mAudioFirstAnchorTimeMediaUs || getVideoLateByUs() > 40000) {
-// QTI_END: 2018-12-06: Video: NuPlayerRenderer: drain video queue without delay when video is late
         msg->post();
     } else {
-// QTI_BEGIN: 2020-07-20: Video: NuPlayer: Renderer: post frame 45 ms ahead of render time
         int64_t vsyncPeriodUs = mVideoScheduler->getVsyncPeriod() / 1000;
         int64_t preVsyncsUs = vsyncPeriodUs ? (45000 / vsyncPeriodUs) * vsyncPeriodUs : 0ll;
-// QTI_END: 2020-07-20: Video: NuPlayer: Renderer: post frame 45 ms ahead of render time
 
-// QTI_BEGIN: 2020-07-20: Video: NuPlayer: Renderer: post frame 45 ms ahead of render time
         // post "45 ms / vsyncPeriod" display refreshes before rendering is due
         // (ITU max-allowed video-lead-time is 45 ms)
         mMediaClock->addTimer(msg, mediaTimeUs, -preVsyncsUs);
-// QTI_END: 2020-07-20: Video: NuPlayer: Renderer: post frame 45 ms ahead of render time
     }
 
     mDrainVideoQueuePending = true;
 }
 
-// QTI_BEGIN: 2024-11-28: Audio: libmediaplayerservice: NuPlayer: playback: fix anchor time
 void NuPlayer::Renderer::forceAudioUpdateAnchorTime() {
     if (!(mHasAudio && offloadingAudio())) {
         return;
@@ -1589,7 +1498,6 @@ void NuPlayer::Renderer::forceAudioUpdateAnchorTime() {
     }
 }
 
-// QTI_END: 2024-11-28: Audio: libmediaplayerservice: NuPlayer: playback: fix anchor time
 void NuPlayer::Renderer::onDrainVideoQueue() {
     if (mVideoQueue.empty()) {
         return;
@@ -1720,7 +1628,6 @@ void NuPlayer::Renderer::notifyEOS_l(bool audio, status_t finalResult, int64_t d
                         mNextVideoTimeMediaUs, nowUs,
                         mNextVideoTimeMediaUs + kDefaultVideoFrameIntervalUs);
             }
-// QTI_BEGIN: 2019-03-20: Video: NuPlayer: notify video render immediately when audio reached EOS
 
             // calculated media time is smaller than current video actual media time, current
             // kWhatDrainVideoQueue message in MediaClock will be post with delay (in some
@@ -1734,12 +1641,9 @@ void NuPlayer::Renderer::notifyEOS_l(bool audio, status_t finalResult, int64_t d
                 msg->setInt32("drainGeneration", mVideoDrainGeneration);
                 msg->post();
             }
-// QTI_END: 2019-03-20: Video: NuPlayer: notify video render immediately when audio reached EOS
         }
-// QTI_BEGIN: 2022-09-20: Video: NuPlayer: clear mHasVideo flag once video is flushed/eos
     } else {
         mHasVideo = false;
-// QTI_END: 2022-09-20: Video: NuPlayer: clear mHasVideo flag once video is flushed/eos
     }
 }
 
@@ -1768,7 +1672,6 @@ void NuPlayer::Renderer::onQueueBuffer(const sp<AMessage> &msg) {
     CHECK(msg->findObject("buffer", &obj));
     sp<MediaCodecBuffer> buffer = static_cast<MediaCodecBuffer *>(obj.get());
 
-// QTI_BEGIN: 2020-11-23: Video: Nuplayer: Use video render rate from video decoder
     if (mHasVideo) {
         if (mVideoScheduler == NULL) {
             float renderFps = 0.0f;
@@ -1782,7 +1685,6 @@ void NuPlayer::Renderer::onQueueBuffer(const sp<AMessage> &msg) {
             mVideoScheduler->init(mVideoRenderFps);
         }
     }
-// QTI_END: 2020-11-23: Video: Nuplayer: Use video render rate from video decoder
     sp<AMessage> notifyConsumed;
     CHECK(msg->findMessage("notifyConsumed", &notifyConsumed));
 
@@ -1910,9 +1812,7 @@ void NuPlayer::Renderer::onFlush(const sp<AMessage> &msg) {
         } else {
             notifyComplete = mNotifyCompleteVideo;
             mNotifyCompleteVideo = false;
-// QTI_BEGIN: 2022-09-20: Video: NuPlayer: clear mHasVideo flag once video is flushed/eos
             mHasVideo = false;
-// QTI_END: 2022-09-20: Video: NuPlayer: clear mHasVideo flag once video is flushed/eos
         }
 
         // If we're currently syncing the queues, i.e. dropping audio while
@@ -1925,7 +1825,6 @@ void NuPlayer::Renderer::onFlush(const sp<AMessage> &msg) {
         // is flushed.
         syncQueuesDone_l();
     }
-// QTI_BEGIN: 2018-11-07: Video: nuplayer: clearAnchor must be followed by updateAnchor in video only case
 
     if (audio && mHasVideo) {
         // Audio should not clear anchor(MediaClock) directly, because video
@@ -1937,7 +1836,6 @@ void NuPlayer::Renderer::onFlush(const sp<AMessage> &msg) {
     } else {
         clearAnchorTime();
     }
-// QTI_END: 2018-11-07: Video: nuplayer: clearAnchor must be followed by updateAnchor in video only case
 
     ALOGV("flushing %s", audio ? "audio" : "video");
     if (audio) {
@@ -1972,11 +1870,9 @@ void NuPlayer::Renderer::onFlush(const sp<AMessage> &msg) {
         flushQueue(&mVideoQueue);
 
         mDrainVideoQueuePending = false;
-// QTI_BEGIN: 2023-02-27: Video: NuPlayer: don't clear preroll status if video buffer is not drained
         if (mVideoSampleReceived) {
             mVideoPrerollInprogress = false;
         }
-// QTI_END: 2023-02-27: Video: NuPlayer: don't clear preroll status if video buffer is not drained
 
         if (mVideoScheduler != NULL) {
             mVideoScheduler->restart();
@@ -2067,14 +1963,11 @@ void NuPlayer::Renderer::onEnableOffloadAudio() {
     }
 }
 
-// QTI_BEGIN: 2022-09-23: Video: NuPlayer: control preroll more precisely
 void NuPlayer::Renderer::onPause(bool forPreroll) {
-// QTI_END: 2022-09-23: Video: NuPlayer: control preroll more precisely
     if (mPaused) {
         return;
     }
 
-// QTI_BEGIN: 2022-09-23: Video: NuPlayer: control preroll more precisely
     if (forPreroll) {
         if (mVideoSampleReceived) {
             ALOGI("NOTE: already received video buffer, ignore preroll request");
@@ -2083,7 +1976,6 @@ void NuPlayer::Renderer::onPause(bool forPreroll) {
         mVideoPrerollInprogress = true;
     }
 
-// QTI_END: 2022-09-23: Video: NuPlayer: control preroll more precisely
     startAudioOffloadPauseTimeout();
 
     {
@@ -2097,9 +1989,7 @@ void NuPlayer::Renderer::onPause(bool forPreroll) {
 
     mDrainAudioQueuePending = false;
     mDrainVideoQueuePending = false;
-// QTI_BEGIN: 2018-04-13: Video: NuPlayer: DEBUG: Notify RENDERING_STARTED event after resume
     mVideoRenderingStarted = false; // force-notify NOTE_INFO MEDIA_INFO_RENDERING_START after resume
-// QTI_END: 2018-04-13: Video: NuPlayer: DEBUG: Notify RENDERING_STARTED event after resume
 
     // Note: audio data may not have been decoded, and the AudioSink may not be opened.
     mAudioSink->pause();
@@ -2115,23 +2005,14 @@ void NuPlayer::Renderer::onResume() {
 
     // Note: audio data may not have been decoded, and the AudioSink may not be opened.
     cancelAudioOffloadPauseTimeout();
-// QTI_BEGIN: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
     bool audioSinkStart = false;
-// QTI_END: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
-// QTI_BEGIN: 2021-01-25: Audio: Revert "Audio: audio shorter than video in clip"
     if (mAudioSink->ready()) {
-// QTI_END: 2021-01-25: Audio: Revert "Audio: audio shorter than video in clip"
         status_t err = mAudioSink->start();
         if (err != OK) {
             ALOGE("cannot start AudioSink err %d", err);
             notifyAudioTearDown(kDueToError);
-// QTI_BEGIN: 2018-03-22: Audio: Update anchor time for offload playback post resume
         } else {
-// QTI_END: 2018-03-22: Audio: Update anchor time for offload playback post resume
-// QTI_BEGIN: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
             audioSinkStart = true;
-// QTI_END: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
-// QTI_BEGIN: 2018-03-22: Audio: Update anchor time for offload playback post resume
             // Update anchor time after resuming playback.
             // Anchor time has to be updated onResume
             // to adjust for AV sync after multiple pause/resumes
@@ -2143,7 +2024,6 @@ void NuPlayer::Renderer::onResume() {
                     mMediaClock->updateAnchor(nowMediaUs, nowUs, INT64_MAX);
                 }
             }
-// QTI_END: 2018-03-22: Audio: Update anchor time for offload playback post resume
         }
     }
 
@@ -2155,9 +2035,7 @@ void NuPlayer::Renderer::onResume() {
             notifyIfMediaRenderingStarted_l();
         }
         // configure audiosink as we did not do it when pausing
-// QTI_BEGIN: 2021-01-25: Audio: Revert "Audio: audio shorter than video in clip"
         if (mAudioSink != NULL && mAudioSink->ready()) {
-// QTI_END: 2021-01-25: Audio: Revert "Audio: audio shorter than video in clip"
             mAudioSink->setPlaybackRate(mPlaybackSettings);
         }
 
@@ -2168,10 +2046,7 @@ void NuPlayer::Renderer::onResume() {
         }
     }
 
-// QTI_BEGIN: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
     if (mIsSeekonPause && audioSinkStart && !offloadingAudio() && mAnchorTimeMediaUs < 0) {
-// QTI_END: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
-// QTI_BEGIN: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
         //In NON-offload playback post seek, delay posting drain video queue
         // till audio start latency, to allow audio update the anchor time
         // also alleviates A/V sync issue
@@ -2181,24 +2056,17 @@ void NuPlayer::Renderer::onResume() {
         msg->setInt32("drainGeneration", getDrainGeneration(false /* audio */));
         msg->post(audioStartLatency);
         mDrainVideoQueuePending = true;
-// QTI_END: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
-// QTI_BEGIN: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
         mIsSeekonPause = false;
-// QTI_END: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
-// QTI_BEGIN: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
         return;
     }
 
-// QTI_END: 2021-04-23: Video: NuPlayer: alleviate initial A/V sync issue during playback after seek
     if (!mVideoQueue.empty()) {
         postDrainVideoQueue();
     }
 }
 
 void NuPlayer::Renderer::onSetVideoFrameRate(float fps) {
-// QTI_BEGIN: 2020-11-23: Video: Nuplayer: Use video render rate from video decoder
     mVideoRenderFps = fps;
-// QTI_END: 2020-11-23: Video: Nuplayer: Use video render rate from video decoder
 }
 
 int32_t NuPlayer::Renderer::getQueueGeneration(bool audio) {
@@ -2247,23 +2115,19 @@ void NuPlayer::Renderer::startAudioOffloadPauseTimeout() {
 // QTI_BEGIN: 2018-03-23: Audio: Check if A2DP playback happens via primary output
         int64_t pauseTimeOutDuration = property_get_int64(
 // QTI_END: 2018-03-23: Audio: Check if A2DP playback happens via primary output
-// QTI_BEGIN: 2019-04-29: Audio: rename vendor.audio.offload.pstimeout.secs property
             "audio.sys.offload.pstimeout.secs",(kOffloadPauseMaxUs/1000000)/*default*/);
-// QTI_END: 2019-04-29: Audio: rename vendor.audio.offload.pstimeout.secs property
         mWakeLock->acquire();
         mWakelockAcquireEvent.updateValues(uptimeMillis(),
                                            mAudioOffloadPauseTimeoutGeneration,
                                            mAudioOffloadPauseTimeoutGeneration);
         sp<AMessage> msg = new AMessage(kWhatAudioOffloadPauseTimeout, this);
         msg->setInt32("drainGeneration", mAudioOffloadPauseTimeoutGeneration);
-// QTI_BEGIN: 2023-06-28: Audio: av: Adjust offload pause timeout based on
         // If offload duration is less than 65secs, keep pause timeout to 10secs
         if (mCurrentOffloadInfo.duration_us < 65000000) {
             msg->post(kOffloadPauseMaxUs);
         } else {
             msg->post(pauseTimeOutDuration*1000000);
         }
-// QTI_END: 2023-06-28: Audio: av: Adjust offload pause timeout based on
     }
 }
 
@@ -2344,9 +2208,7 @@ status_t NuPlayer::Renderer::onOpenAudioSink(
             audioFormat = AVUtils::get()->updateAudioFormat(audioFormat, format);
             bitWidth = AVUtils::get()->getAudioSampleBits(format);
 // QTI_END: 2018-01-23: Audio: stagefright: Make classes customizable and add AV extensions
-// QTI_BEGIN: 2021-03-02: Audio: NuPlayerRenderer: intialize bitrate to 0
             int avgBitRate = 0;
-// QTI_END: 2021-03-02: Audio: NuPlayerRenderer: intialize bitrate to 0
             format->findInt32("bitrate", &avgBitRate);
 
             int32_t aacProfile = -1;
@@ -2570,18 +2432,12 @@ void NuPlayer::Renderer::WakeLockEvent::dump(AString& logString) {
   logString.append("]");
 }
 
-// QTI_BEGIN: 2022-09-23: Video: NuPlayer: control preroll more precisely
 bool NuPlayer::Renderer::isVideoPrerollInprogress() const {
     return mVideoPrerollInprogress;
-// QTI_END: 2022-09-23: Video: NuPlayer: control preroll more precisely
-// QTI_BEGIN: 2019-11-17: Video: nuplayer: Avoid preroll if video sample is already received
 }
 
-// QTI_END: 2019-11-17: Video: nuplayer: Avoid preroll if video sample is already received
-// QTI_BEGIN: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
 void NuPlayer::Renderer::setIsSeekonPause() {
     mIsSeekonPause = true;
 }
 
-// QTI_END: 2022-03-26: Video: nuplayer: proper handling of audio start latency for A/V sync
 }  // namespace android

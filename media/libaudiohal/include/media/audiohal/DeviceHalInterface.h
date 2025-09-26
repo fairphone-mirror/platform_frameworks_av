@@ -91,7 +91,8 @@ class DeviceHalInterface : public virtual RefBase
             struct audio_config *config,
             const char *address,
             sp<StreamOutHalInterface> *outStream,
-            const std::vector<playback_track_metadata_v7_t>& sourceMetadata = {}) = 0;
+            const std::vector<playback_track_metadata_v7_t>& sourceMetadata = {},
+            int32_t mixPortHalId = 0) = 0;
 
     // Creates and opens the audio hardware input stream. The stream is closed
     // by releasing all references to the returned object.
@@ -104,7 +105,8 @@ class DeviceHalInterface : public virtual RefBase
             audio_source_t source,
             audio_devices_t outputDevice,
             const char *outputDeviceAddress,
-            sp<StreamInHalInterface> *inStream) = 0;
+            sp<StreamInHalInterface> *inStream,
+            int32_t mixPortHalId = 0) = 0;
 
     // Returns whether createAudioPatch and releaseAudioPatch operations are supported.
     virtual status_t supportsAudioPatches(bool *supportsPatches) = 0;

@@ -449,9 +449,7 @@ status_t AudioPolicyManager::setDeviceConnectionStateInt(const sp<DeviceDescript
         checkLeBroadcastRoutes(wasLeUnicastActive, nullptr, 0);
 
         mpClientInterface->onAudioPortListUpdate();
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
         ALOGV("%s() completed for device: %s", __func__, device->toString().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
         return NO_ERROR;
     }  // end if is output device
 
@@ -467,10 +465,8 @@ status_t AudioPolicyManager::setDeviceConnectionStateInt(const sp<DeviceDescript
                 return INVALID_OPERATION;
             }
 
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
             ALOGV("%s() connecting device %s", __func__, device->toString().c_str());
 
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
             if (mAvailableInputDevices.add(device) < 0) {
                 return NO_MEMORY;
             }
@@ -553,9 +549,7 @@ status_t AudioPolicyManager::setDeviceConnectionStateInt(const sp<DeviceDescript
         }
 
         mpClientInterface->onAudioPortListUpdate();
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
         ALOGV("%s() completed for device: %s", __func__, device->toString().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
         return NO_ERROR;
     } // end if is input device
 
@@ -787,12 +781,10 @@ status_t AudioPolicyManager::getHwOffloadFormatsSupportedForBluetoothMedia(
     std::unordered_set<audio_format_t> formatSet;
     sp<HwModule> primaryModule =
             mHwModules.getModuleFromName(AUDIO_HARDWARE_MODULE_ID_PRIMARY);
-// QTI_BEGIN: 2019-06-26: Audio: audiopolicy: add null pointer check for primary hw
     if (primaryModule == nullptr) {
         ALOGE("%s() unable to get primary module", __func__);
         return NO_INIT;
     }
-// QTI_END: 2019-06-26: Audio: audiopolicy: add null pointer check for primary hw
 
     DeviceTypeSet audioDeviceSet;
 
@@ -1380,13 +1372,9 @@ audio_io_handle_t AudioPolicyManager::getOutput(audio_stream_type_t stream)
 
     audio_output_flags_t flags = AUDIO_OUTPUT_FLAG_NONE;
     if (stream == AUDIO_STREAM_MUSIC && mConfig->useDeepBufferForMedia()) {
-// QTI_BEGIN: 2018-08-01: Audio: Set Deep Buffer flag for music stream.
         // use DEEP_BUFFER as default output for music stream type
-// QTI_END: 2018-08-01: Audio: Set Deep Buffer flag for music stream.
         flags = AUDIO_OUTPUT_FLAG_DEEP_BUFFER;
-// QTI_BEGIN: 2018-08-01: Audio: Set Deep Buffer flag for music stream.
     }
-// QTI_END: 2018-08-01: Audio: Set Deep Buffer flag for music stream.
     const audio_io_handle_t output = selectOutput(outputs, flags);
 
     ALOGV("getOutput() stream %d selected devices %s, output %d", stream,
@@ -1718,7 +1706,9 @@ status_t AudioPolicyManager::getOutputForAttr(const audio_attributes_t *attr,
     *selectedDeviceIds = sanitizedRequestedPortIds;
 
     status_t status = getOutputForAttrInt(&resultAttr, output, session, attr, stream, uid,
+// QTI_BEGIN: 2025-03-19: Audio: audiopolicy: Remove customization to internally use direct pcm
             config, flags, selectedDeviceIds, &isRequestedDeviceForExclusiveUse,
+// QTI_END: 2025-03-19: Audio: audiopolicy: Remove customization to internally use direct pcm
             secondaryOutputs != nullptr ? &secondaryMixes : nullptr, outputType, isSpatialized,
             isBitPerfect);
     if (status != NO_ERROR) {
@@ -1820,7 +1810,6 @@ status_t AudioPolicyManager::openDirectOutput(audio_stream_type_t stream,
 // QTI_END: 2021-01-27: Audio: audiopolicy: Add support for multipleOffload.
 
     // exclusive outputs for MMAP and Offload are enforced by different session ids.
-// QTI_BEGIN: 2024-06-19: Audio: audiopolicy: Modify to accomodate direct_track_reprioritization changes
     for (size_t i = 0; i < mOutputs.size(); i++) {
         sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
         if (!desc->isDuplicated() && (profile == desc->mProfile)) {
@@ -1835,7 +1824,6 @@ status_t AudioPolicyManager::openDirectOutput(audio_stream_type_t stream,
                     mOutputs.keyAt(i), session);
                 *output = mOutputs.keyAt(i);
                 return NO_ERROR;
-// QTI_END: 2024-06-19: Audio: audiopolicy: Modify to accomodate direct_track_reprioritization changes
             }
         }
     }
@@ -1845,10 +1833,8 @@ status_t AudioPolicyManager::openDirectOutput(audio_stream_type_t stream,
             // MMAP gracefully handles lack of an exclusive track resource by mixing
             // above the audio framework. For AAudio to know that the limit is reached,
             // return an error.
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
             ALOGW("%s profile %s can't open new mmap output maxOpenCount reached", __func__,
                   profile->getName().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
             return NAME_NOT_FOUND;
 // QTI_BEGIN: 2024-07-14: Audio: audiopolicy: Fix direct pcm behavior when 2 direct tracks are played
         } else if (profile->getFlags() == AUDIO_OUTPUT_FLAG_DIRECT) {
@@ -1861,10 +1847,8 @@ status_t AudioPolicyManager::openDirectOutput(audio_stream_type_t stream,
             for (int i = 0; i < mOutputs.size() && !profile->canOpenNewIo(); i++) {
                 const auto desc = mOutputs.valueAt(i);
                 if (desc->mProfile == profile) {
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                     ALOGV("%s closeOutput %d to prioritize session %d on profile %s", __func__,
                           desc->mIoHandle, session, profile->getName().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                     closeOutput(desc->mIoHandle);
                 }
             }
@@ -1873,16 +1857,12 @@ status_t AudioPolicyManager::openDirectOutput(audio_stream_type_t stream,
 
     // Unable to close streams to find free resources for this request
     if (!profile->canOpenNewIo()) {
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
         ALOGW("%s profile %s can't open new output maxOpenCount reached", __func__,
               profile->getName().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
         return NAME_NOT_FOUND;
     }
 
-// QTI_BEGIN: 2024-06-19: Audio: audiopolicy: Modify to accomodate direct_track_reprioritization changes
     auto outputDesc = sp<SwAudioOutputDescriptor>::make(profile, mpClientInterface);
-// QTI_END: 2024-06-19: Audio: audiopolicy: Modify to accomodate direct_track_reprioritization changes
 
     // An MSD patch may be using the only output stream that can service this request. Release
     // all MSD patches to prioritize this request over any active output on MSD.
@@ -1982,15 +1962,22 @@ audio_io_handle_t AudioPolicyManager::getOutputForDevices(
         *flags = (audio_output_flags_t)(*flags | AUDIO_OUTPUT_FLAG_DIRECT);
     }
 
+// QTI_BEGIN: 2021-10-06: Audio: audiopolicy: Fix direct flag selection logic
     const bool offloadDisable =
             property_get_bool("audio.offload.disable", false /* default_value */);
+// QTI_END: 2021-10-06: Audio: audiopolicy: Fix direct flag selection logic
+// QTI_BEGIN: 2025-03-19: Audio: audiopolicy: Remove customization to internally use direct pcm
     if ((offloadDisable || stream != AUDIO_STREAM_MUSIC) &&
         (audio_is_linear_pcm(config->format) && *flags == AUDIO_OUTPUT_FLAG_DIRECT)) {
         ALOGV("%s Remove direct flags stream %d,orginal flags %0x, offload disabled %d ", __func__,
               stream, *flags, offloadDisable);
+// QTI_END: 2025-03-19: Audio: audiopolicy: Remove customization to internally use direct pcm
+// QTI_BEGIN: 2021-10-06: Audio: audiopolicy: Fix direct flag selection logic
         *flags = AUDIO_OUTPUT_FLAG_NONE;
+// QTI_END: 2021-10-06: Audio: audiopolicy: Fix direct flag selection logic
     }
 
+// QTI_BEGIN: 2021-01-27: Audio: audiopolicy: Force deep-buffer for media.
     bool forceDeepBuffer = false;
 // QTI_END: 2021-01-27: Audio: audiopolicy: Force deep-buffer for media.
     // only allow deep buffering for music stream type
@@ -3153,14 +3140,12 @@ bool AudioPolicyManager::releaseOutput(audio_port_handle_t portId)
 
     ALOGV("releaseOutput() %d", outputDesc->mIoHandle);
 
-// QTI_BEGIN: 2019-08-30: Audio: APM: stop output if it's still active before being released
     sp<TrackClientDescriptor> client = outputDesc->getClient(portId);
     if (outputDesc->isClientActive(client)) {
         ALOGW("releaseOutput() inactivates portId %d in good faith", portId);
         stopOutput(portId);
     }
 
-// QTI_END: 2019-08-30: Audio: APM: stop output if it's still active before being released
     if (outputDesc->mFlags & AUDIO_OUTPUT_FLAG_DIRECT) {
         if (outputDesc->mDirectOpenCount <= 0) {
             ALOGW("releaseOutput() invalid open count %d for output %d",
@@ -3933,10 +3918,8 @@ status_t AudioPolicyManager::setStreamVolumeIndex(audio_stream_type_t stream,
         ALOGW("%s: no group for stream %s, bailing out", __func__, toString(stream).c_str());
         return NO_ERROR;
     }
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
     ALOGV("%s: stream %s attributes=%s, index %d , device 0x%X", __func__,
           toString(stream).c_str(), toString(attributes).c_str(), index, device);
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
     return setVolumeIndexForAttributes(attributes, index, muted, device);
 }
 
@@ -4124,10 +4107,8 @@ status_t AudioPolicyManager::setVolumeCurveIndex(int index,
     bool hasVoice = hasVoiceStream(volumeCurves.getStreamTypes());
     if (((index < volumeCurves.getVolumeIndexMin()) && !(hasVoice && index == 0)) ||
             (index > volumeCurves.getVolumeIndexMax())) {
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
         ALOGE("%s: wrong index %d min=%d max=%d, device 0x%X", __FUNCTION__, index,
               volumeCurves.getVolumeIndexMin(), volumeCurves.getVolumeIndexMax(), device);
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
         return BAD_VALUE;
     }
     if (!audio_is_output_device(device)) {
@@ -7239,7 +7220,6 @@ void AudioPolicyManager::onNewAudioModulesAvailableInt(DeviceVector *newDevices)
             if (!mConfig->getOutputDevices().contains(supportedDevice)) {
                 continue;
             }
-// QTI_BEGIN: 2024-06-30: Audio: audiopolicy: skip opening mmap profile during new device connection (2)
 
             if (outProfile->isMmap() && !outProfile->hasDynamicAudioProfile()
                 && availProfileDevices.areAllDevicesAttached()) {
@@ -7248,7 +7228,6 @@ void AudioPolicyManager::onNewAudioModulesAvailableInt(DeviceVector *newDevices)
                 continue;
             }
 
-// QTI_END: 2024-06-30: Audio: audiopolicy: skip opening mmap profile during new device connection (2)
             sp<SwAudioOutputDescriptor> outputDesc = new SwAudioOutputDescriptor(outProfile,
                                                                                  mpClientInterface);
             audio_io_handle_t output = AUDIO_IO_HANDLE_NONE;
@@ -7310,7 +7289,6 @@ void AudioPolicyManager::onNewAudioModulesAvailableInt(DeviceVector *newDevices)
                     __func__, inProfile->getTagName().c_str());
                 continue;
             }
-// QTI_BEGIN: 2024-06-30: Audio: audiopolicy: skip opening mmap profile during new device connection (2)
 
             if (inProfile->isMmap() && !inProfile->hasDynamicAudioProfile()
                 && availProfileDevices.areAllDevicesAttached()) {
@@ -7319,7 +7297,6 @@ void AudioPolicyManager::onNewAudioModulesAvailableInt(DeviceVector *newDevices)
                 continue;
             }
 
-// QTI_END: 2024-06-30: Audio: audiopolicy: skip opening mmap profile during new device connection (2)
             sp<AudioInputDescriptor> inputDesc = new AudioInputDescriptor(
                     inProfile, mpClientInterface, false /*isPreemptor*/);
 
@@ -7327,9 +7304,7 @@ void AudioPolicyManager::onNewAudioModulesAvailableInt(DeviceVector *newDevices)
             status_t status = inputDesc->open(nullptr,
                                               availProfileDevices.itemAt(0),
                                               AUDIO_SOURCE_MIC,
-// QTI_BEGIN: 2024-06-27: Audio: audiopolicy: use profile flags during opening an input
                                               (audio_input_flags_t) inProfile->getFlags(),
-// QTI_END: 2024-06-27: Audio: audiopolicy: use profile flags during opening an input
                                               &input);
             if (status != NO_ERROR) {
                 ALOGW("%s: Cannot open input stream for device %s for profile %s on hw module %s",
@@ -7476,13 +7451,11 @@ status_t AudioPolicyManager::checkOutputsForDevice(const sp<DeviceDescriptor>& d
             if (j != outputs.size()) {
                 continue;
             }
-// QTI_BEGIN: 2024-06-27: Audio: audiopolicy: skip opening mmap profile during new device connection
             if (profile->isMmap() && !profile->hasDynamicAudioProfile()) {
                 ALOGV("%s skip opening output for mmap profile %s",
                       __func__, profile->getTagName().c_str());
                 continue;
             }
-// QTI_END: 2024-06-27: Audio: audiopolicy: skip opening mmap profile during new device connection
             if (!profile->canOpenNewIo()) {
                 ALOGW("Max Output number %u already opened for this profile %s",
                       profile->maxOpenCount, profile->getTagName().c_str());
@@ -7599,10 +7572,8 @@ status_t AudioPolicyManager::checkInputsForDevice(const sp<DeviceDescriptor>& de
 
                 if (profile->supportsDevice(device)) {
                     profiles.add(profile);
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                     ALOGV("%s : adding profile %s from module %s", __func__,
                           profile->getTagName().c_str(), hwModule->getName());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                 }
             }
         }
@@ -7634,30 +7605,22 @@ status_t AudioPolicyManager::checkInputsForDevice(const sp<DeviceDescriptor>& de
                 continue;
             }
 
-// QTI_BEGIN: 2024-06-27: Audio: audiopolicy: skip opening mmap profile during new device connection
             if (profile->isMmap() && !profile->hasDynamicAudioProfile()) {
                 ALOGV("%s skip opening input for mmap profile %s",
                       __func__, profile->getTagName().c_str());
                 continue;
             }
-// QTI_END: 2024-06-27: Audio: audiopolicy: skip opening mmap profile during new device connection
             if (!profile->canOpenNewIo()) {
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                 ALOGW("%s Max Input number %u already opened for this profile %s",
                       __func__, profile->maxOpenCount, profile->getTagName().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                 continue;
             }
 
             desc = new AudioInputDescriptor(profile, mpClientInterface, false  /*isPreemptor*/);
             audio_io_handle_t input = AUDIO_IO_HANDLE_NONE;
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
             ALOGV("%s opening input for profile %s", __func__, profile->getTagName().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
-// QTI_BEGIN: 2024-06-27: Audio: audiopolicy: use profile flags during opening an input
             status = desc->open(nullptr, device, AUDIO_SOURCE_MIC,
                                 (audio_input_flags_t) profile->getFlags(), &input);
-// QTI_END: 2024-06-27: Audio: audiopolicy: use profile flags during opening an input
 
             if (status == NO_ERROR) {
                 const String8& address = String8(device->address().c_str());
@@ -7668,10 +7631,8 @@ status_t AudioPolicyManager::checkInputsForDevice(const sp<DeviceDescriptor>& de
                 }
                 updateAudioProfiles(device, input, profile);
                 if (!profile->hasValidAudioProfile()) {
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                     ALOGW("%s direct input missing param for profile %s", __func__,
                             profile->getTagName().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                     desc->close();
                     input = AUDIO_IO_HANDLE_NONE;
                 }
@@ -7682,26 +7643,20 @@ status_t AudioPolicyManager::checkInputsForDevice(const sp<DeviceDescriptor>& de
             } // endif input != 0
 
             if (input == AUDIO_IO_HANDLE_NONE) {
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                 ALOGW("%s could not open input for device %s on profile %s", __func__,
                        device->toString().c_str(), profile->getTagName().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                 profiles.removeAt(profile_index);
                 profile_index--;
             } else {
                 if (audio_device_is_digital(device->type())) {
                     device->importAudioPortAndPickAudioProfile(profile);
                 }
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                 ALOGV("%s: adding input %d for profile %s", __func__,
                         input, profile->getTagName().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
 
                 if (checkCloseInput(desc)) {
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                     ALOGV("%s: closing input %d for profile %s", __func__,
                             input, profile->getTagName().c_str());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                     closeInput(input);
                 }
             }
@@ -7720,10 +7675,8 @@ status_t AudioPolicyManager::checkInputsForDevice(const sp<DeviceDescriptor>& de
                  profile_index++) {
                 sp<IOProfile> profile = hwModule->getInputProfiles()[profile_index];
                 if (profile->supportsDevice(device)) {
-// QTI_BEGIN: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                     ALOGV("%s: clearing direct input profile %s on module %s", __func__,
                             profile->getTagName().c_str(), hwModule->getName());
-// QTI_END: 2024-07-05: Audio: audiopolicy: Improve logging for device connection cases
                     profile->clearAudioProfiles();
                 }
             }
@@ -8180,9 +8133,7 @@ void AudioPolicyManager::checkA2dpSuspend()
 {
     audio_io_handle_t a2dpOutput = mOutputs.getA2dpOutput();
 
-// QTI_BEGIN: 2018-05-27: Audio: audiopolicy: revert selecting speaker when a2dp is suspended
     if (a2dpOutput == 0 || mOutputs.isA2dpOffloadedOnPrimary()) {
-// QTI_END: 2018-05-27: Audio: audiopolicy: revert selecting speaker when a2dp is suspended
         mA2dpSuspended = false;
         return;
     }

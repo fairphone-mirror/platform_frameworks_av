@@ -27,6 +27,7 @@
 #include "DeviceDescriptor.h"
 #include "TypeConverter.h"
 #include "HwModule.h"
+#include <unordered_set>
 
 namespace android {
 
@@ -288,12 +289,10 @@ ssize_t DeviceVector::add(const sp<DeviceDescriptor>& item)
         ALOGW("DeviceVector::add device %08x already in", item->type());
         ret = -1;
     }
-// QTI_BEGIN: 2019-08-06: Audio: audiopolicy: sort devices based on type, id and addr
 
     return ret;
 }
 
-// QTI_END: 2019-08-06: Audio: audiopolicy: sort devices based on type, id and addr
 int DeviceVector::do_compare(const void* lhs, const void* rhs) const {
     const auto ldevice = *reinterpret_cast<const sp<DeviceDescriptor>*>(lhs);
     const auto rdevice = *reinterpret_cast<const sp<DeviceDescriptor>*>(rhs);
@@ -387,11 +386,13 @@ DeviceVector DeviceVector::getDevicesFromTypes(const DeviceTypeSet& types) const
     if (types.empty()) {
         return devices;
     }
+    std::unordered_set<audio_devices_t> foundType;
     for (size_t i = 0; i < size(); i++) {
-        if (types.count(itemAt(i)->type()) != 0) {
+        if (types.count(itemAt(i)->type()) != 0 && (foundType.count(itemAt(i)->type()) == 0)) {
             devices.add(itemAt(i));
-            ALOGV("DeviceVector::%s() for type %08x found %p",
-                    __func__, itemAt(i)->type(), itemAt(i).get());
+            foundType.insert(itemAt(i)->type());
+            ALOGV("DeviceVector::%s() for type %08x address %s",
+                    __func__, itemAt(i)->type(), itemAt(i)->address().c_str());
         }
     }
     return devices;
@@ -544,7 +545,6 @@ DeviceVector DeviceVector::filterForEngine() const
     return filteredDevices;
 }
 
-// QTI_BEGIN: 2024-06-30: Audio: audiopolicy: skip opening mmap profile during new device connection (2)
 bool DeviceVector::areAllDevicesAttached() const
 {
     for (const auto &device : *this) {
@@ -555,5 +555,4 @@ bool DeviceVector::areAllDevicesAttached() const
     return true;
 }
 
-// QTI_END: 2024-06-30: Audio: audiopolicy: skip opening mmap profile during new device connection (2)
 } // namespace android

@@ -421,7 +421,7 @@ void CameraManagerGlobal::getCameraIdList(const DeviceContext& context,
             continue;
         }
 
-// QTI_BEGIN: 2025-03-20: Camera: Allowing only [0, 1] cameras in NDK list
+// QTI_BEGIN: 2025-03-20: Camera: Filtering out other than [0, 1] cameras in NDK Cameras.
         // HAL populate only [0, 1] as public cameras, but mDeviceStatusMap has all cameraIds
         // which includes physical cameras exposed as logical cameras
         // this cause mismatch between cameraList from CameraManger.
@@ -434,7 +434,7 @@ void CameraManagerGlobal::getCameraIdList(const DeviceContext& context,
         } else {
           cameraIds->push_back(key.cameraId);
         }
-// QTI_END: 2025-03-20: Camera: Allowing only [0, 1] cameras in NDK list
+// QTI_END: 2025-03-20: Camera: Filtering out other than [0, 1] cameras in NDK Cameras.
     }
 }
 

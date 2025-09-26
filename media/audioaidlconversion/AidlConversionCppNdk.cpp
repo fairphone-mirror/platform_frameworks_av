@@ -569,10 +569,8 @@ const detail::AudioDevicePairs& getAudioDevicePairs() {
                 AudioDeviceType::IN_BUS, AudioDeviceType::OUT_BUS);
         append_AudioDeviceDescription(pairs,
                 AUDIO_DEVICE_IN_PROXY, AUDIO_DEVICE_OUT_PROXY,
-// QTI_BEGIN: 2023-11-16: Audio: media: Add connection types for Proxy.
                 AudioDeviceType::IN_AFE_PROXY, AudioDeviceType::OUT_AFE_PROXY,
                 GET_DEVICE_DESC_CONNECTION(VIRTUAL));
-// QTI_END: 2023-11-16: Audio: media: Add connection types for Proxy.
         append_AudioDeviceDescription(pairs,
                 AUDIO_DEVICE_IN_USB_HEADSET, AUDIO_DEVICE_OUT_USB_HEADSET,
                 AudioDeviceType::IN_HEADSET, AudioDeviceType::OUT_HEADSET,

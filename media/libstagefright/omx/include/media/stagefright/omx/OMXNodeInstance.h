@@ -152,24 +152,16 @@ private:
     KeyedVector<OMX_BUFFERHEADERTYPE *, IOMX::buffer_id> mBufferHeaderToBufferID;
 
     bool mLegacyAdaptiveExperiment;
-// QTI_BEGIN: 2018-06-17: Audio: libstagefright: Avoid additional checks for extradata ports
     IOMX::PortMode mPortMode[2];
-// QTI_END: 2018-06-17: Audio: libstagefright: Avoid additional checks for extradata ports
-// QTI_BEGIN: 2018-02-07: Video: stagefright: Add support for extradata
     // metadata and secure buffer type tracking
-// QTI_END: 2018-02-07: Video: stagefright: Add support for extradata
-// QTI_BEGIN: 2018-06-17: Audio: libstagefright: Avoid additional checks for extradata ports
     MetadataBufferType mMetadataType[2];
-// QTI_END: 2018-06-17: Audio: libstagefright: Avoid additional checks for extradata ports
     enum SecureBufferType {
         kSecureBufferTypeUnknown,
         kSecureBufferTypeOpaque,
         kSecureBufferTypeNativeHandle,
     };
     SecureBufferType mSecureBufferType[2];
-// QTI_BEGIN: 2018-06-17: Audio: libstagefright: Avoid additional checks for extradata ports
     bool mGraphicBufferEnabled[2];
-// QTI_END: 2018-06-17: Audio: libstagefright: Avoid additional checks for extradata ports
 
     // Following are OMX parameters managed by us (instead of the component)
     // OMX_IndexParamMaxFrameDurationForBitrateControl
@@ -182,9 +174,7 @@ private:
     // For debug support
     char *mName;
     int DEBUG;
-// QTI_BEGIN: 2018-06-17: Audio: libstagefright: Avoid additional checks for extradata ports
     size_t mNumPortBuffers[2];  // modified under mLock, read outside for debug
-// QTI_END: 2018-06-17: Audio: libstagefright: Avoid additional checks for extradata ports
     Mutex mDebugLock;
     // following are modified and read under mDebugLock
     int DEBUG_BUMP;

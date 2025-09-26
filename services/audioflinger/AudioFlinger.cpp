@@ -3064,13 +3064,14 @@ void AudioFlinger::setAudioHwSyncForSession_l(
 
 
 sp<IAfThreadBase> AudioFlinger::openOutput_l(audio_module_handle_t module,
-                                                        audio_io_handle_t *output,
-                                                        audio_config_t *halConfig,
-                                                        audio_config_base_t *mixerConfig,
-                                                        audio_devices_t deviceType,
-                                                        const String8& address,
-                                                        audio_output_flags_t *flags,
-                                                        const audio_attributes_t attributes)
+                                             audio_io_handle_t *output,
+                                             audio_config_t *halConfig,
+                                             audio_config_base_t *mixerConfig,
+                                             audio_devices_t deviceType,
+                                             const String8& address,
+                                             audio_output_flags_t *flags,
+                                             const audio_attributes_t attributes,
+                                             int32_t mixPortHalId)
 {
     AudioHwDevice *outHwDev = findSuitableHwDev_l(module, deviceType);
     if (outHwDev == NULL) {
@@ -3099,7 +3100,8 @@ sp<IAfThreadBase> AudioFlinger::openOutput_l(audio_module_handle_t module,
             flags,
             halConfig,
             address.c_str(),
-            {trackMetadata});
+            {trackMetadata},
+            mixPortHalId);
 
     mHardwareStatus = AUDIO_HW_IDLE;
 
@@ -3192,7 +3194,7 @@ status_t AudioFlinger::openOutput(const media::OpenOutputRequest& request,
     audio_utils::lock_guard _l(mutex());
 
     const sp<IAfThreadBase> thread = openOutput_l(module, &output, &halConfig,
-            &mixerConfig, deviceType, address, &flags, attributes);
+            &mixerConfig, deviceType, address, &flags, attributes, request.mixPortHalId);
     if (thread != 0) {
         uint32_t latencyMs = 0;
         if ((flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) == 0) {
@@ -3420,7 +3422,8 @@ status_t AudioFlinger::openInput(const media::OpenInputRequest& request,
             VALUE_OR_RETURN_STATUS(aidl2legacy_AudioSource_audio_source_t(request.source)),
             VALUE_OR_RETURN_STATUS(aidl2legacy_int32_t_audio_input_flags_t_mask(request.flags)),
             AUDIO_DEVICE_NONE,
-            String8{});
+            String8{},
+            request.mixPortHalId);
 
     response->input = VALUE_OR_RETURN_STATUS(legacy2aidl_audio_io_handle_t_int32_t(input));
     response->config = VALUE_OR_RETURN_STATUS(
@@ -3436,14 +3439,15 @@ status_t AudioFlinger::openInput(const media::OpenInputRequest& request,
 }
 
 sp<IAfThreadBase> AudioFlinger::openInput_l(audio_module_handle_t module,
-                                                         audio_io_handle_t *input,
-                                                         audio_config_t *config,
-                                                         audio_devices_t devices,
-                                                         const char* address,
-                                                         audio_source_t source,
-                                                         audio_input_flags_t flags,
-                                                         audio_devices_t outputDevice,
-                                                         const String8& outputDeviceAddress)
+                                            audio_io_handle_t *input,
+                                            audio_config_t *config,
+                                            audio_devices_t devices,
+                                            const char* address,
+                                            audio_source_t source,
+                                            audio_input_flags_t flags,
+                                            audio_devices_t outputDevice,
+                                            const String8& outputDeviceAddress,
+                                            int32_t mixPortHalId)
 {
     AudioHwDevice *inHwDev = findSuitableHwDev_l(module, devices);
     if (inHwDev == NULL) {
@@ -3475,7 +3479,8 @@ sp<IAfThreadBase> AudioFlinger::openInput_l(audio_module_handle_t module,
             address,
             source,
             outputDevice,
-            outputDeviceAddress.c_str());
+            outputDeviceAddress.c_str(),
+            mixPortHalId);
 
     if (status == NO_ERROR) {
         if ((flags & AUDIO_INPUT_FLAG_MMAP_NOIRQ) != 0) {

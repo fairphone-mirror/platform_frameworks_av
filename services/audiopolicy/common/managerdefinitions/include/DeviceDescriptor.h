@@ -282,13 +282,11 @@ public:
 
     const AudioProfileVector& getSupportedProfiles() { return mSupportedProfiles; }
 
-// QTI_BEGIN: 2024-06-30: Audio: audiopolicy: skip opening mmap profile during new device connection (2)
     /**
      * @brief checks if all devices in device vector are attached to the HwModule or not
      * @return true if all the devices in device vector are attached, otherwise false
      */
     bool areAllDevicesAttached() const;
-// QTI_END: 2024-06-30: Audio: audiopolicy: skip opening mmap profile during new device connection (2)
     // Return a string to describe the DeviceVector. The sensitive information will only be
     // added to the string if `includeSensitiveInfo` is true.
     std::string toString(bool includeSensitiveInfo = false) const;

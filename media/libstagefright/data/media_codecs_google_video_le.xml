@@ -39,8 +39,6 @@
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
             <Limit name="block-count" range="1-16384" />
-<!-- QTI_BEGIN: 2018-08-10: Video: libstagefright: Limit software avc decoder capability-->
-<!-- QTI_END: 2018-08-10: Video: libstagefright: Limit software avc decoder capability-->
             <Limit name="blocks-per-second" range="1-108000" />
             <Limit name="bitrate" range="1-40000000" />
             <Feature name="adaptive-playback" />

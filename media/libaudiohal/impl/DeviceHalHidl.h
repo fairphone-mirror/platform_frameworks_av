@@ -75,7 +75,8 @@ class DeviceHalHidl : public DeviceHalInterface, public CoreConversionHelperHidl
                               audio_output_flags_t flags, struct audio_config* config,
                               const char* address, sp<StreamOutHalInterface>* outStream,
                               const std::vector<playback_track_metadata_v7_t>&
-                                                                sourceMetadata = {}) override;
+                                                                sourceMetadata = {},
+                              int32_t mixPortHalId = 0) override;
 
     // Creates and opens the audio hardware input stream. The stream is closed
     // by releasing all references to the returned object.
@@ -83,7 +84,8 @@ class DeviceHalHidl : public DeviceHalInterface, public CoreConversionHelperHidl
                              struct audio_config* config, audio_input_flags_t flags,
                              const char* address, audio_source_t source,
                              audio_devices_t outputDevice, const char* outputDeviceAddress,
-                             sp<StreamInHalInterface>* inStream) override;
+                             sp<StreamInHalInterface>* inStream,
+                             int32_t mixPortHalId = 0) override;
 
     // Returns whether createAudioPatch and releaseAudioPatch operations are supported.
     status_t supportsAudioPatches(bool* supportsPatches) override;

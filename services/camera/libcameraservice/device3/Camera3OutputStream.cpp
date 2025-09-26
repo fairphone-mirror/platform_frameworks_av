@@ -445,9 +445,7 @@ status_t Camera3OutputStream::returnBufferCheckedLocked(
             bufferDeferred = true;
         } else {
             nsecs_t presentTime = mSyncToDisplay ?
-// QTI_BEGIN: 2023-07-25: Camera: Revert "Merge "Camera: Handle release fence when syncing preview to display" into udc-dev"
                     syncTimestampToDisplayLocked(captureTime) : captureTime;
-// QTI_END: 2023-07-25: Camera: Revert "Merge "Camera: Handle release fence when syncing preview to display" into udc-dev"
 
             setTransform(transform, true/*mayChangeMirror*/);
             res = native_window_set_buffers_timestamp(mConsumer.get(), presentTime);
@@ -1387,9 +1385,7 @@ void Camera3OutputStream::returnPrefetchedBuffersLocked() {
     }
 }
 
-// QTI_BEGIN: 2023-07-25: Camera: Revert "Merge "Camera: Handle release fence when syncing preview to display" into udc-dev"
 nsecs_t Camera3OutputStream::syncTimestampToDisplayLocked(nsecs_t t) {
-// QTI_END: 2023-07-25: Camera: Revert "Merge "Camera: Handle release fence when syncing preview to display" into udc-dev"
     nsecs_t currentTime = systemTime();
     if (!mFixedFps) {
         mLastCaptureTime = t;
@@ -1492,9 +1488,7 @@ nsecs_t Camera3OutputStream::syncTimestampToDisplayLocked(nsecs_t t) {
     // - For variable FPS, or if the capture interval deviates from refresh
     //   interval for more than 5%, find a presentation time closest to the
     //   (lastPresentationTime + captureToPresentOffset) instead.
-// QTI_BEGIN: 2023-07-25: Camera: Revert "Merge "Camera: Handle release fence when syncing preview to display" into udc-dev"
     int maxTimelines = std::min(kMaxTimelines, (int)vsyncEventData.frameTimelinesLength);
-// QTI_END: 2023-07-25: Camera: Revert "Merge "Camera: Handle release fence when syncing preview to display" into udc-dev"
     float biasForShortDelay = 1.0f;
     for (int i = 0; i < maxTimelines; i ++) {
         const auto& vsyncTime = vsyncEventData.frameTimelines[i];
@@ -1505,9 +1499,7 @@ nsecs_t Camera3OutputStream::syncTimestampToDisplayLocked(nsecs_t t) {
             biasForShortDelay = 1.0 - 2.0 * i / (maxTimelines - 1);
         }
         if (std::abs(vsyncTime.expectedPresentationTime - idealPresentT) < minDiff &&
-// QTI_BEGIN: 2023-07-25: Camera: Revert "Merge "Camera: Handle release fence when syncing preview to display" into udc-dev"
                 vsyncTime.deadlineTimestamp >= currentTime &&
-// QTI_END: 2023-07-25: Camera: Revert "Merge "Camera: Handle release fence when syncing preview to display" into udc-dev"
                 ((!cameraDisplayInSync && vsyncTime.expectedPresentationTime > minPresentT) ||
                  (cameraDisplayInSync && vsyncTime.expectedPresentationTime >
                 mLastPresentTime + minInterval +

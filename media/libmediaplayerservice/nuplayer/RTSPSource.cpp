@@ -20,25 +20,19 @@
 
 #include "RTSPSource.h"
 
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
 #include <cutils/properties.h>
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
 #include <media/IMediaHTTPService.h>
 #include <media/stagefright/MediaDefs.h>
 #include <media/stagefright/MetaData.h>
 #include <media/stagefright/rtsp/MyHandler.h>
 #include <media/stagefright/rtsp/SDPLoader.h>
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
 #include <mediaplayerservice/AVMediaServiceExtensions.h>
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
 #include <mpeg2ts/AnotherPacketSource.h>
 
 namespace android {
 
 const int64_t kNearEOSTimeoutUs = 2000000LL; // 2 secs
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
 const uint32_t kMaxNumKeepDamagedAccessUnits = 30;
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
 
 // Default Buffer Underflow/Prepare/StartServer/Overflow Marks
 static const int kUnderflowMarkMs   =  1000;  // 1 second
@@ -69,12 +63,10 @@ NuPlayer::RTSPSource::RTSPSource(
       mEOSPending(false),
       mSeekGeneration(0),
       mEOSTimeoutAudio(0),
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
       mEOSTimeoutVideo(0),
       mVideoTrackIndex(-1),
       mKeepDamagedAccessUnits(false),
       mNumKeepDamagedAccessUnits(0)  {
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
     mBufferingSettings.mInitialMarkMs = kPrepareMarkMs;
     mBufferingSettings.mResumePlaybackMarkMs = kOverflowMarkMs;
     if (headers) {
@@ -612,13 +604,10 @@ void NuPlayer::RTSPSource::onMessageReceived(const sp<AMessage> &msg) {
             sp<ABuffer> accessUnit;
             CHECK(msg->findBuffer("accessUnit", &accessUnit));
 
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
             bool isVideo = trackIndex == (size_t)mVideoTrackIndex;
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
             int32_t damaged;
             if (accessUnit->meta()->findInt32("damaged", &damaged)
                     && damaged) {
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
                 if (isVideo && mKeepDamagedAccessUnits
                         && mNumKeepDamagedAccessUnits < kMaxNumKeepDamagedAccessUnits) {
                     ALOGI("keep a damaged access unit.");
@@ -631,7 +620,6 @@ void NuPlayer::RTSPSource::onMessageReceived(const sp<AMessage> &msg) {
                 if (isVideo) {
                     mNumKeepDamagedAccessUnits = 0;
                 }
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
             }
 
             if (mTSParser != NULL) {
@@ -669,13 +657,11 @@ void NuPlayer::RTSPSource::onMessageReceived(const sp<AMessage> &msg) {
                 if (!info->mNPTMappingValid) {
                     // This is a live stream, we didn't receive any normal
                     // playtime mapping. We won't map to npt time.
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
                     if (!AVMediaServiceUtils::get()->checkNPTMapping(&info->mRTPTime,
                             &info->mNormalPlaytimeUs, &info->mNPTMappingValid, rtpTime)) {
                         source->queueAccessUnit(accessUnit);
                         break;
                     }
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
                 }
 
                 int64_t nptUs =
@@ -752,7 +738,6 @@ void NuPlayer::RTSPSource::onMessageReceived(const sp<AMessage> &msg) {
             break;
         }
 
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
         case MyHandler::kWhatByeReceived:
         {
             sp<AMessage> msg = dupNotify();
@@ -761,7 +746,6 @@ void NuPlayer::RTSPSource::onMessageReceived(const sp<AMessage> &msg) {
             break;
         }
 
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
         case SDPLoader::kWhatSDPLoaded:
         {
             onSDPLoaded(msg);
@@ -796,7 +780,6 @@ void NuPlayer::RTSPSource::onConnected() {
         bool isAudio = !strncasecmp(mime, "audio/", 6);
         bool isVideo = !strncasecmp(mime, "video/", 6);
 
-// QTI_BEGIN: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
         if (isVideo) {
             mVideoTrackIndex = i;
             char value[PROPERTY_VALUE_MAX];
@@ -807,7 +790,6 @@ void NuPlayer::RTSPSource::onConnected() {
             }
         }
 
-// QTI_END: 2018-04-12: Video: RTSP: add default implementations in NuPlayer for rtsp changes
         TrackInfo info;
         info.mTimeScale = timeScale;
         info.mRTPTime = 0;

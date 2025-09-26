@@ -330,9 +330,11 @@ private:
 
     bool mHDRGainmapEnabled = false;
 
+// QTI_BEGIN: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     // Used to check if dynamic profile is HLG10
     bool mDynamicProfileHLG10    = false;
 
+// QTI_END: 2025-03-20: Camera: Enable P010 with HLG10 for HEIC format
     // UltraHDR tonemap color and format aspects
     static constexpr uhdr_img_fmt_t kUltraHdrInputFmt = UHDR_IMG_FMT_24bppYCbCrP010;
     static constexpr uhdr_color_gamut kUltraHdrInputGamut = UHDR_CG_BT_2100;

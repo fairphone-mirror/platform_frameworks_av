@@ -2607,24 +2607,33 @@ void AudioPolicyService::AudioCommandThread::insertCommand_l(sp<AudioCommand>& c
         case CREATE_AUDIO_PATCH:
         case RELEASE_AUDIO_PATCH: {
             audio_patch_handle_t handle;
+// QTI_BEGIN: 2014-10-15: Audio: audio policy: Fix for voice call audio loss
             struct audio_patch patch;
+// QTI_END: 2014-10-15: Audio: audio policy: Fix for voice call audio loss
             if (command->mCommand == CREATE_AUDIO_PATCH) {
                 handle = ((CreateAudioPatchData *)command->mParam.get())->mHandle;
+// QTI_BEGIN: 2014-10-15: Audio: audio policy: Fix for voice call audio loss
                 patch = ((CreateAudioPatchData *)command->mParam.get())->mPatch;
+// QTI_END: 2014-10-15: Audio: audio policy: Fix for voice call audio loss
             } else {
                 handle = ((ReleaseAudioPatchData *)command->mParam.get())->mHandle;
                 memset(&patch, 0, sizeof(patch));
             }
             audio_patch_handle_t handle2;
+// QTI_BEGIN: 2014-10-15: Audio: audio policy: Fix for voice call audio loss
             struct audio_patch patch2;
+// QTI_END: 2014-10-15: Audio: audio policy: Fix for voice call audio loss
             if (command2->mCommand == CREATE_AUDIO_PATCH) {
                 handle2 = ((CreateAudioPatchData *)command2->mParam.get())->mHandle;
+// QTI_BEGIN: 2014-10-15: Audio: audio policy: Fix for voice call audio loss
                 patch2 = ((CreateAudioPatchData *)command2->mParam.get())->mPatch;
+// QTI_END: 2014-10-15: Audio: audio policy: Fix for voice call audio loss
             } else {
                 handle2 = ((ReleaseAudioPatchData *)command2->mParam.get())->mHandle;
                 memset(&patch2, 0, sizeof(patch2));
             }
             if (handle != handle2) break;
+// QTI_BEGIN: 2014-10-15: Audio: audio policy: Fix for voice call audio loss
             /* Filter CREATE_AUDIO_PATCH commands only when they are issued for
                same output. */
             if( (command->mCommand == CREATE_AUDIO_PATCH) &&
@@ -2641,6 +2650,7 @@ void AudioPolicyService::AudioCommandThread::insertCommand_l(sp<AudioCommand>& c
                        break;
                 }
             }
+// QTI_END: 2014-10-15: Audio: audio policy: Fix for voice call audio loss
             ALOGV("Filtering out %s audio patch command for handle %d",
                   (command->mCommand == CREATE_AUDIO_PATCH) ? "create" : "release", handle);
             removedCommands.add(command2);

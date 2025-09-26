@@ -345,11 +345,9 @@ private:
 Codec2ConfigurableClient::HidlImpl::HidlImpl(const sp<Base>& base)
       : mBase{base},
         mName{[base]() -> C2String {
-// QTI_BEGIN: 2022-03-25: Video: Codec2Client: add nullptr check before accessing Configurable name
                 if (base == nullptr) {
                     return "";
                 }
-// QTI_END: 2022-03-25: Video: Codec2Client: add nullptr check before accessing Configurable name
                 C2String outName;
                 Return<void> transStatus = base->getName(
                         [&outName](const hidl_string& name) {
@@ -691,13 +689,9 @@ c2_status_t Codec2ConfigurableClient::AidlImpl::query(
                 status = C2_BAD_INDEX;
                 continue;
             }
-// QTI_BEGIN: 2024-04-09: Video: Revert "Revert "Merge changes from topic "c2-aidl-test" into main am: 0f41381a6f am: 8ff37c0d06 am: 7daa172e3b""
             if (stackParams[i++]->updateFrom(*paramPointer)) {
-// QTI_END: 2024-04-09: Video: Revert "Revert "Merge changes from topic "c2-aidl-test" into main am: 0f41381a6f am: 8ff37c0d06 am: 7daa172e3b""
                 ++numQueried;
-// QTI_BEGIN: 2024-04-09: Video: Revert "Revert "Merge changes from topic "c2-aidl-test" into main am: 0f41381a6f am: 8ff37c0d06 am: 7daa172e3b""
             } else {
-// QTI_END: 2024-04-09: Video: Revert "Revert "Merge changes from topic "c2-aidl-test" into main am: 0f41381a6f am: 8ff37c0d06 am: 7daa172e3b""
                 LOG(WARNING) << "query -- param update failed: "
                                 "index = "
                              << paramPointer->index() << ".";

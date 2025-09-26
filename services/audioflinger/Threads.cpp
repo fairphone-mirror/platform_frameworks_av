@@ -3222,9 +3222,9 @@ NO_THREAD_SAFETY_ANALYSIS
 {
     // unfortunately we have no way of recovering from errors here, hence the LOG_ALWAYS_FATAL
     const audio_config_base_t audioConfig = mOutput->getAudioProperties();
-// QTI_BEGIN: 2023-06-22: Core: audioflinger: Normalize FrameCount for duplicating thread
+// QTI_BEGIN: 2023-06-22: Audio: audioflinger: Normalize FrameCount for duplicating thread
     bool isDup = false;
-// QTI_END: 2023-06-22: Core: audioflinger: Normalize FrameCount for duplicating thread
+// QTI_END: 2023-06-22: Audio: audioflinger: Normalize FrameCount for duplicating thread
     mSampleRate = audioConfig.sample_rate;
     mChannelMask = audioConfig.channel_mask;
     if (!audio_is_output_channel(mChannelMask)) {
@@ -3300,12 +3300,12 @@ NO_THREAD_SAFETY_ANALYSIS
         // This may need to be updated as MixerThread/OutputTracks are added and not here.
     }
 
-// QTI_BEGIN: 2023-06-22: Core: audioflinger: Normalize FrameCount for duplicating thread
+// QTI_BEGIN: 2023-06-22: Audio: audioflinger: Normalize FrameCount for duplicating thread
     if (property_get_bool("vendor.audio.gaming.enabled", false /* default_value */) &&
             mType == DUPLICATING) {
         isDup = true;
     }
-// QTI_END: 2023-06-22: Core: audioflinger: Normalize FrameCount for duplicating thread
+// QTI_END: 2023-06-22: Audio: audioflinger: Normalize FrameCount for duplicating thread
     // Calculate size of normal sink buffer relative to the HAL output buffer size
     double multiplier = 1.0;
     // Note: mType == SPATIALIZER does not support FastMixer and DEEP is by definition not "fast"
@@ -6094,11 +6094,9 @@ PlaybackThread::mixer_state MixerThread::prepareTracks_l(
                 if (track->state() == IAfTrackBase::RESUMING) {
                     track->setState(IAfTrackBase::ACTIVE);
                     // If a new track is paused immediately after start, do not ramp on resume.
-// QTI_BEGIN: 2018-03-22: Audio: don't apply ramp if track is paused before the first mix
                     if (cblk->mServer != 0) {
                         param = AudioMixer::RAMP_VOLUME;
                     }
-// QTI_END: 2018-03-22: Audio: don't apply ramp if track is paused before the first mix
                 }
                 mAudioMixer->setParameter(trackId, AudioMixer::RESAMPLE, AudioMixer::RESET, NULL);
                 mLeftVolFloat = -1.0;
@@ -7029,13 +7027,11 @@ void DirectOutputThread::onAddNewTrack_l()
                 mFlushPending = true;
             }
         }
-// QTI_BEGIN: 2018-03-22: Audio: audioflinger: fix for playback paused during track transition
     } else if (previousTrack == 0) {
         // there could be an old track added back during track transition for direct
         // output, so always issues flush to flush data of the previous track if it
         // was already destroyed with HAL paused, then flush can resume the playback
         mFlushPending = true;
-// QTI_END: 2018-03-22: Audio: audioflinger: fix for playback paused during track transition
     }
     PlaybackThread::onAddNewTrack_l();
 }
@@ -7179,9 +7175,7 @@ PlaybackThread::mixer_state DirectOutputThread::prepareTracks_l(
                  }
             }
             if ((track->sharedBuffer() != 0) || track->isStopped() ||
-// QTI_BEGIN: 2018-10-22: Audio: audioflinger: fix redundant adding to tracksToRemove
                     track->isStopping_2() || track->isPaused()) {
-// QTI_END: 2018-10-22: Audio: audioflinger: fix redundant adding to tracksToRemove
                 // We have consumed all the buffers of this track.
                 // Remove it from the list of active tracks.
                 bool presComplete = false;
@@ -7348,10 +7342,8 @@ bool DirectOutputThread::shouldStandby_l()
     if (mStandby) {
         return false; // already in standby
 // QTI_END: 2018-03-22: Audio: add support to enable track offload using direct output
-// QTI_BEGIN: 2016-03-18: Audio: allow standby for direct track
     }
 
-// QTI_END: 2016-03-18: Audio: allow standby for direct track
 // QTI_BEGIN: 2018-03-22: Audio: add support to enable track offload using direct output
     // allowing DIRECT linear pcm track to be in standby even when active
     standbyForDirectPcm = (mType == DIRECT) && audio_is_linear_pcm(mFormat) && !usesHwAvSync();
@@ -7485,9 +7477,7 @@ void DirectOutputThread::flushHw_l()
 {
     PlaybackThread::flushHw_l();
     mOutput->flush();
-// QTI_BEGIN: 2025-02-10: Audio: set mHwPaused=true for DirectoutputThread
     mHwPaused = false;
-// QTI_END: 2025-02-10: Audio: set mHwPaused=true for DirectoutputThread
     mFlushPending = false;
 // QTI_BEGIN: 2019-10-21: Audio: audioflinger: reset frames written at the time of flush for direct outputs.
     mFramesWritten = 0;

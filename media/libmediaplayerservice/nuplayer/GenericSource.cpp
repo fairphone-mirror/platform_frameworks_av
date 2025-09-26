@@ -45,9 +45,7 @@
 #include <media/stagefright/MediaExtractorFactory.h>
 #include <media/stagefright/MetaData.h>
 #include <media/stagefright/Utils.h>
-// QTI_BEGIN: 2018-04-23: Audio: Enable ByteStream mode
 #include "mediaplayerservice/AVNuExtensions.h"
-// QTI_END: 2018-04-23: Audio: Enable ByteStream mode
 #include <mpeg2ts/AnotherPacketSource.h>
 
 namespace android {
@@ -102,9 +100,7 @@ void NuPlayer::GenericSource::resetDataSource() {
     }
     mUri.clear();
     mUriHeaders.clear();
-// QTI_BEGIN: 2018-05-07: Video: MediaPlayerService: Clear the vector holding tracks
     mSources.clear();
-// QTI_END: 2018-05-07: Video: MediaPlayerService: Clear the vector holding tracks
     mFd.reset();
     mOffset = 0;
     mLength = 0;
@@ -319,9 +315,7 @@ status_t NuPlayer::GenericSource::startSources() {
     //
     // TODO: this logic may no longer be relevant after the removal of widevine
     // support
-// QTI_BEGIN: 2019-09-11: Video: media: Disable ByteStream mode support
     if (mAudioTrack.mSource != NULL && mAudioTrack.mSource->start() != OK) {
-// QTI_END: 2019-09-11: Video: media: Disable ByteStream mode support
         ALOGE("failed to start audio track!");
         return UNKNOWN_ERROR;
     }
@@ -1289,7 +1283,6 @@ sp<ABuffer> NuPlayer::GenericSource::mediaBufferToABuffer(
         meta->setBuffer("mpeg-user-data", mpegUserData);
     }
 
-// QTI_BEGIN: 2019-10-20: Video: stagefright: Set HDR10+ sample metadata to codec
     const void *hdr10PlusInfo;
     size_t hdr10PlusInfoLength;
     if (mb->meta_data().findData(
@@ -1298,7 +1291,6 @@ sp<ABuffer> NuPlayer::GenericSource::mediaBufferToABuffer(
         meta->setBuffer("hdr10-plus-info", hdr10PlusData);
     }
 
-// QTI_END: 2019-10-20: Video: stagefright: Set HDR10+ sample metadata to codec
     mb->release();
     mb = NULL;
 
