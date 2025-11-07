@@ -2042,7 +2042,8 @@ status_t CameraService::handleEvictionsLocked(const std::string& cameraId, int c
         }
         const auto& clients = mActiveClientManager.getAll();
         auto clientIter = std::find_if(clients.begin(), clients.end(),  [](const auto& client) {
-            return client->getValue() && client->getValue()->getPackageName() == std::string("com.android.settings");});
+            return client->getValue() && (client->getValue()->getPackageName() == std::string("com.android.settings")
+                                      ||client->getValue()->getPackageName() == std::string("com.google.android.apps.tachyon"));});
         if (isNativeCameraApp && clientIter != clients.end()) {
             ALOGW("[fairps] add setttings evicted");
             evicted.push_back(*clientIter);
