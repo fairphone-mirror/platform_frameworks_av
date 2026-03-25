@@ -264,6 +264,20 @@ status_t AudioRecord::set(
     }
     // FPS-3295 add for Camera app end
 
+    // FPS-3680 Change audio_route to dual-mic for whatsApp|snapchat|instagram|gallery begin
+    String8 AppFlag;
+    if (strstr(mClientAttributionSource.toString().c_str(), "com.whatsapp") ||
+        strstr(mClientAttributionSource.toString().c_str(), "com.snapchat.android") ||
+        strstr(mClientAttributionSource.toString().c_str(), "com.instagram.android") ||
+        strstr(mClientAttributionSource.toString().c_str(), "org.fossify.gallery")) {
+        AppFlag.append("fps_DualMic_app=true");
+        AudioSystem::setParameters(AppFlag);
+    } else {
+        AppFlag.append("fps_DualMic_app=false");
+        AudioSystem::setParameters(AppFlag);
+    }
+    // FPS-3680 Change audio_route to dual-mic for whatsApp|snapchat|instagram|gallery end
+
     // TODO b/182392553: refactor or remove
     pid_t callingPid = IPCThreadState::self()->getCallingPid();
     pid_t myPid = getpid();
