@@ -102,7 +102,6 @@
 #include "device3/Camera3FakeStream.h"
 #include "device3/Camera3InputStream.h"
 #include "device3/Camera3OutputStream.h"
-#include "fputils/Camera3FPOutputStream.h"
 #include "device3/Camera3SharedOutputStream.h"
 #include "utils/CameraTraces.h"
 #include "utils/SchedulingPolicyUtils.h"
@@ -1214,10 +1213,6 @@ status_t Camera3Device::createStream(const std::vector<SurfaceHolder>& consumers
         return BAD_VALUE;
     }
     IPCTransport transport = getTransportType();
-    //Begin added by juting.huang for cameraalgoservice
-    int32_t extraBufferCnt = 0;
-    int32_t scenetype = getSceneType();
-    //End added by juting.huang for cameraalgoservice
     if (format == HAL_PIXEL_FORMAT_BLOB) {
         ssize_t blobBufferSize;
         if (dataSpace == HAL_DATASPACE_DEPTH) {
@@ -1261,24 +1256,6 @@ status_t Camera3Device::createStream(const std::vector<SurfaceHolder>& consumers
                 mTimestampOffset, physicalCameraId, sensorPixelModesUsed, transport, streamSetId,
                 mUseHalBufManager, dynamicRangeProfile, streamUseCase, mDeviceTimeBaseIsRealtime,
                 timestampBase, colorSpace, useReadoutTimestamp);
-    //Begin added by juting.huang for cameraalgoservice
-    } else if (Camera3FPOutputStream::negotiate(mId, mNextStreamId, consumers, hasDeferredConsumer,
-                    width, height, format, consumerUsage,
-                    dataSpace, rotation,
-                    physicalCameraId, streamSetId, extraBufferCnt, scenetype)) {
-        if (consumers.size() == 0 && hasDeferredConsumer) {
-            newStream = new Camera3FPOutputStream(mId, mNextStreamId,
-                    width, height, format, consumerUsage, dataSpace, rotation,
-                    mTimestampOffset, physicalCameraId, sensorPixelModesUsed, transport, extraBufferCnt,
-                    scenetype, &mDeviceInfo, mSubDevicesInfo, streamSetId, isMultiResolution);
-        }
-        else {
-            newStream = new Camera3FPOutputStream(mId, mNextStreamId, consumers[0].mSurface,
-                    width, height, format, dataSpace, rotation,
-                    mTimestampOffset, physicalCameraId, sensorPixelModesUsed, transport, extraBufferCnt,
-                    scenetype, &mDeviceInfo, mSubDevicesInfo, streamSetId, isMultiResolution);
-        }
-    //End added by juting.huang for cameraalgoservice
     } else if (consumers.size() == 0 && hasDeferredConsumer) {
         newStream = new Camera3OutputStream(mNextStreamId,
                 width, height, format, consumerUsage, dataSpace, rotation,

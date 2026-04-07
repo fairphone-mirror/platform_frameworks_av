@@ -536,11 +536,6 @@ class CameraDeviceBase : public virtual FrameProducer {
      */
     virtual bool supportsCameraMute() = 0;
 
-    //Begin added by juting.huang for cameraalgoservice
-    virtual void setSceneType(int32_t SceneType) = 0;
-    virtual int32_t getSceneType() const = 0;
-    //End added by juting.huang for cameraalgoservice
-
     /**
      * Mute the camera.
      *

@@ -1333,18 +1333,7 @@ class Camera3Device :
         const bool         mSupportSettingsOverride;
         int32_t            mVndkVersion = -1;
     };
-    //Begin added by juting.huang for cameraalgoservice
-    int32_t mSceneType = -1;
-    void setSceneType(int32_t SceneType) override
-    {
-        mSceneType = SceneType;
-    }
 
-    int32_t getSceneType() const override
-    {
-        return mSceneType;
-    }
-    //End added by juting.huang for cameraalgoservice
     virtual sp<RequestThread> createNewRequestThread(wp<Camera3Device> /*parent*/,
                 sp<camera3::StatusTracker> /*statusTracker*/,
                 sp<HalInterface> /*interface*/,
